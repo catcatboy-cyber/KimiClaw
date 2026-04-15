@@ -40,6 +40,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+import java.security.cert.X509Certificate;
 
 public class UpdateManager {
 
@@ -200,11 +204,10 @@ public class UpdateManager {
         builder.setMessage(releaseName + "\n\n" + releaseNotes + "\n\n文件大小: " + sizeText);
         builder.setPositiveButton("立即更新", (dialog, which) -> {
             if (downloadUrl != null) {
-                startDownloadWithPermissionCheck(downloadUrl);
+                // 使用浏览器下载
+                openBrowserDownload(downloadUrl);
             } else {
-                // 如果没有找到APK链接，打开浏览器
-                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(GITHUB_RELEASES_URL));
-                context.startActivity(intent);
+                Toast.makeText(context, "下载链接无效", Toast.LENGTH_SHORT).show();
             }
         });
         builder.setNegativeButton("稍后提醒", null);
@@ -229,57 +232,88 @@ public class UpdateManager {
     }
 
     /**
-     * 检查权限并开始下载
+     * 使用浏览器下载APK
      */
-    private void startDownloadWithPermissionCheck(String downloadUrl) {
-        this.pendingDownloadUrl = downloadUrl;
+    private void openBrowserDownload(String downloadUrl) {
+        try {
+            // 使用系统浏览器下载
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            intent.setData(Uri.parse(downloadUrl));
+            intent.addCategory(Intent.CATEGORY_BROWSABLE);
 
-        // Android 10+ (API 29+) 不需要存储权限，使用 Scoped Storage
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            downloadWithHttpConnection(downloadUrl);
-            return;
-        }
-
-        // Android 6.0 - 9.0 需要存储权限
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                    != PackageManager.PERMISSION_GRANTED) {
-                // 没有权限，显示权限请求对话框
-                showPermissionRequestDialog();
-                return;
+            // 检查是否有浏览器可以处理
+            if (intent.resolveActivity(context.getPackageManager()) != null) {
+                context.startActivity(intent);
+                Toast.makeText(context, "请在浏览器中下载APK，下载完成后点击安装", Toast.LENGTH_LONG).show();
+            } else {
+                // 如果没有浏览器，使用DownloadManager
+                downloadWithDownloadManager(downloadUrl);
             }
+        } catch (Exception e) {
+            Log.e(TAG, "Browser download error: " + e.getMessage(), e);
+            // 备用方案：使用DownloadManager
+            downloadWithDownloadManager(downloadUrl);
         }
-
-        // 有权限，直接下载
-        downloadWithHttpConnection(downloadUrl);
     }
 
     /**
-     * 显示权限请求对话框
+     * 使用系统DownloadManager下载
+     */
+    private void downloadWithDownloadManager(String downloadUrl) {
+        try {
+            // 删除旧文件
+            File oldFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                    "KimiClaw_update.apk");
+            if (oldFile.exists()) {
+                oldFile.delete();
+            }
+
+            DownloadManager.Request request = new DownloadManager.Request(Uri.parse(downloadUrl));
+            request.setTitle("KimiClaw 更新下载");
+            request.setDescription("正在下载最新版本...");
+            request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+            request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "KimiClaw_update.apk");
+            request.setMimeType("application/vnd.android.package-archive");
+            request.setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI | DownloadManager.Request.NETWORK_MOBILE);
+
+            // 添加Cookie（GitHub可能需要）
+            request.addRequestHeader("User-Agent", "Mozilla/5.0 (Linux; Android 10)");
+
+            downloadId = downloadManager.enqueue(request);
+
+            Toast.makeText(context, "开始下载更新，请在通知栏查看进度", Toast.LENGTH_LONG).show();
+
+            // 注册下载完成监听
+            registerDownloadReceiver();
+
+        } catch (Exception e) {
+            Log.e(TAG, "DownloadManager error: " + e.getMessage(), e);
+            Toast.makeText(context, "下载启动失败: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+
+    /**
+     * 检查权限并开始下载（保留用于兼容性）
+     */
+    private void startDownloadWithPermissionCheck(String downloadUrl) {
+        // 直接使用浏览器下载，不需要存储权限
+        openBrowserDownload(downloadUrl);
+    }
+
+    /**
+     * 显示权限请求对话框（保留用于兼容性）
      */
     private void showPermissionRequestDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
         builder.setTitle("需要存储权限");
-        builder.setMessage("下载更新需要存储权限，用于保存APK文件到下载目录。\n\n" +
-                "请选择操作：\n\n" +
-                "方法一（推荐）：点击[请求权限]直接授权\n" +
-                "方法二：点击[去设置]手动开启权限\n\n" +
+        builder.setMessage("下载更新需要存储权限。\n\n" +
                 "鸿蒙系统设置路径：设置 → 应用 → KimiClaw → 权限 → 存储");
 
-        builder.setPositiveButton("请求权限", (dialog, which) -> {
-            // 直接请求权限
-            if (context instanceof Activity) {
-                ActivityCompat.requestPermissions((Activity) context,
-                        new String[]{android.Manifest.permission.WRITE_EXTERNAL_STORAGE},
-                        PERMISSION_REQUEST_CODE);
-            } else {
-                Toast.makeText(context, "无法请求权限，请使用设置方式", Toast.LENGTH_SHORT).show();
-                openSettingsPage();
-            }
-        });
-
-        builder.setNeutralButton("去设置", (dialog, which) -> {
-            openSettingsPage();
+        builder.setPositiveButton("去设置", (dialog, which) -> {
+            Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+            Uri uri = Uri.fromParts("package", context.getPackageName(), null);
+            intent.setData(uri);
+            context.startActivity(intent);
         });
 
         builder.setNegativeButton("取消", null);
@@ -287,147 +321,126 @@ public class UpdateManager {
     }
 
     /**
-     * 打开应用设置页面
+     * 处理权限请求结果（保留用于兼容性）
      */
-    private void openSettingsPage() {
-        Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-        Uri uri = Uri.fromParts("package", context.getPackageName(), null);
-        intent.setData(uri);
-        context.startActivity(intent);
-
-        Toast.makeText(context, "请开启存储权限后，重新点击检查更新", Toast.LENGTH_LONG).show();
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        // 不再使用
     }
 
     /**
-     * 处理权限请求结果（在Activity中调用）
+     * 注册下载完成监听
      */
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        if (requestCode == PERMISSION_REQUEST_CODE) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // 权限被授予，继续下载
-                if (pendingDownloadUrl != null) {
-                    downloadWithHttpConnection(pendingDownloadUrl);
-                    pendingDownloadUrl = null;
-                }
-            } else {
-                // 权限被拒绝
-                Toast.makeText(context, "没有存储权限无法下载更新", Toast.LENGTH_SHORT).show();
-                showPermissionRequestDialog();
+    private void registerDownloadReceiver() {
+        if (downloadReceiver != null) {
+            try {
+                context.unregisterReceiver(downloadReceiver);
+            } catch (Exception e) {
+                // 忽略
             }
+        }
+
+        downloadReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
+                if (id == downloadId) {
+                    // 查询下载状态
+                    DownloadManager.Query query = new DownloadManager.Query();
+                    query.setFilterById(downloadId);
+                    Cursor cursor = downloadManager.query(query);
+
+                    if (cursor != null && cursor.moveToFirst()) {
+                        int statusIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS);
+                        int status = cursor.getInt(statusIndex);
+
+                        if (status == DownloadManager.STATUS_SUCCESSFUL) {
+                            // 下载成功，安装APK
+                            mainHandler.post(() -> {
+                                File apkFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                                        "KimiClaw_update.apk");
+                                installApkFile(apkFile);
+                            });
+                        } else if (status == DownloadManager.STATUS_FAILED) {
+                            int reasonIndex = cursor.getColumnIndex(DownloadManager.COLUMN_REASON);
+                            int reason = cursor.getInt(reasonIndex);
+                            Log.e(TAG, "Download failed, reason: " + reason);
+                            mainHandler.post(() -> Toast.makeText(context, "下载失败，请重试", Toast.LENGTH_SHORT).show());
+                        }
+
+                        cursor.close();
+                    }
+                }
+            }
+        };
+
+        context.registerReceiver(downloadReceiver,
+                new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
+    }
+
+    /**
+     * 安装APK文件
+     */
+    private void installApkFile(File apkFile) {
+        if (apkFile == null || !apkFile.exists()) {
+            Toast.makeText(context, "APK文件不存在", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // 检查文件大小
+        long fileSize = apkFile.length();
+        Log.d(TAG, "APK file size: " + fileSize + " bytes, path: " + apkFile.getAbsolutePath());
+
+        if (fileSize < 100000) {  // 小于100KB认为不完整
+            Toast.makeText(context, "下载文件不完整(" + fileSize + "字节)，请重试", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        try {
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+            Uri apkUri;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                // Android 7.0+ 使用 FileProvider
+                apkUri = FileProvider.getUriForFile(context,
+                        context.getPackageName() + ".fileprovider", apkFile);
+                Log.d(TAG, "FileProvider URI: " + apkUri.toString());
+            } else {
+                apkUri = Uri.fromFile(apkFile);
+            }
+
+            intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
+
+            // 检查是否有应用可以处理这个intent
+            if (intent.resolveActivity(context.getPackageManager()) != null) {
+                context.startActivity(intent);
+            } else {
+                Toast.makeText(context, "无法打开安装界面，请手动安装", Toast.LENGTH_SHORT).show();
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Install error: " + e.getMessage(), e);
+            Toast.makeText(context, "安装失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
 
     /**
-     * 使用HttpURLConnection下载APK - 处理GitHub重定向
+     * 清理资源
      */
-    private void downloadWithHttpConnection(String downloadUrl) {
-        executor.execute(() -> {
-            HttpsURLConnection conn = null;
-            InputStream input = null;
-            FileOutputStream output = null;
-
+    public void cleanup() {
+        if (downloadReceiver != null) {
             try {
-                mainHandler.post(() -> Toast.makeText(context, "开始下载更新...", Toast.LENGTH_SHORT).show());
-
-                // 处理GitHub重定向
-                String finalUrl = downloadUrl;
-                int redirectCount = 0;
-                final int MAX_REDIRECTS = 5;
-
-                while (redirectCount < MAX_REDIRECTS) {
-                    URL url = new URL(finalUrl);
-                    conn = (HttpsURLConnection) url.openConnection();
-                    conn.setRequestMethod("GET");
-                    conn.setConnectTimeout(30000);
-                    conn.setReadTimeout(30000);
-                    conn.setInstanceFollowRedirects(false); // 手动处理重定向
-                    conn.setRequestProperty("Accept", "application/vnd.android.package-archive,application/octet-stream,*/*");
-                    conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 10)");
-
-                    int responseCode = conn.getResponseCode();
-                    Log.d(TAG, "HTTP Response Code: " + responseCode + " for URL: " + finalUrl);
-
-                    // 处理重定向
-                    if (responseCode == HttpURLConnection.HTTP_MOVED_PERM ||
-                            responseCode == HttpURLConnection.HTTP_MOVED_TEMP ||
-                            responseCode == HttpURLConnection.HTTP_SEE_OTHER ||
-                            responseCode == 307 || responseCode == 308) {
-                        String newUrl = conn.getHeaderField("Location");
-                        conn.disconnect();
-                        if (newUrl != null) {
-                            finalUrl = newUrl;
-                            redirectCount++;
-                            Log.d(TAG, "Redirect to: " + finalUrl);
-                            continue;
-                        } else {
-                            mainHandler.post(() -> Toast.makeText(context, "重定向失败", Toast.LENGTH_SHORT).show());
-                            return;
-                        }
-                    }
-
-                    if (responseCode == HttpURLConnection.HTTP_OK) {
-                        break; // 成功，跳出循环
-                    } else {
-                        mainHandler.post(() -> Toast.makeText(context, "下载失败，错误码: " + responseCode, Toast.LENGTH_SHORT).show());
-                        return;
-                    }
-                }
-
-                // 获取文件大小
-                int contentLength = conn.getContentLength();
-                Log.d(TAG, "Content-Length: " + contentLength);
-
-                // 获取下载目录
-                File downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-                if (!downloadDir.exists()) {
-                    downloadDir.mkdirs();
-                }
-
-                File apkFile = new File(downloadDir, "KimiClaw_update.apk");
-
-                // 写入文件
-                input = new BufferedInputStream(conn.getInputStream());
-                output = new FileOutputStream(apkFile);
-
-                byte[] buffer = new byte[8192];
-                int bytesRead;
-                long totalBytes = 0;
-
-                while ((bytesRead = input.read(buffer)) != -1) {
-                    output.write(buffer, 0, bytesRead);
-                    totalBytes += bytesRead;
-                }
-
-                output.flush();
-                Log.d(TAG, "Downloaded " + totalBytes + " bytes to " + apkFile.getAbsolutePath());
-
-                // 关闭连接
-                conn.disconnect();
-                conn = null;
-
-                // 检查文件大小
-                long fileSize = apkFile.length();
-                if (fileSize < 100000) {  // 小于100KB认为不完整
-                    mainHandler.post(() -> Toast.makeText(context, "下载文件不完整(" + fileSize + "字节)，请重试", Toast.LENGTH_SHORT).show());
-                    return;
-                }
-
-                // 安装APK
-                final File finalApkFile = apkFile;
-                mainHandler.post(() -> installApkFile(finalApkFile));
-
+                context.unregisterReceiver(downloadReceiver);
             } catch (Exception e) {
-                Log.e(TAG, "Download error: " + e.getMessage(), e);
-                final String errorMsg = e.getMessage();
-                mainHandler.post(() -> Toast.makeText(context, "下载出错: " + errorMsg, Toast.LENGTH_LONG).show());
-            } finally {
-                try {
-                    if (output != null) output.close();
-                    if (input != null) input.close();
-                    if (conn != null) conn.disconnect();
-                } catch (Exception e) {
-                    Log.e(TAG, "Close error: " + e.getMessage());
-                }
+                // 忽略
+            }
+        }
+        if (executor != null && !executor.isShutdown()) {
+            executor.shutdown();
+        }
+    }
+}
+        }
             }
         });
     }
