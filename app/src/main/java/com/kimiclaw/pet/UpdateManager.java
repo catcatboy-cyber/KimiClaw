@@ -9,7 +9,6 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
-import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
@@ -27,14 +26,19 @@ import androidx.core.content.FileProvider;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import javax.net.ssl.HttpsURLConnection;
 
 public class UpdateManager {
 
@@ -313,7 +317,7 @@ public class UpdateManager {
     }
 
     /**
-     * 下载并安装APK
+     * 下载并安装APK - 使用系统DownloadManager
      */
     private void downloadAndInstall(String downloadUrl) {
         // 删除旧文件
@@ -323,31 +327,71 @@ public class UpdateManager {
             oldFile.delete();
         }
 
-        // 使用直接下载方式，避免重定向问题
-        executor.execute(() -> {
-            try {
-                mainHandler.post(() -> Toast.makeText(context, "开始下载更新...", Toast.LENGTH_SHORT).show());
+        // 使用系统DownloadManager下载
+        try {
+            DownloadManager.Request request = new DownloadManager.Request(Uri.parse(downloadUrl));
+            request.setTitle("KimiClaw 更新下载");
+            request.setDescription("正在下载最新版本...");
+            request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+            request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "KimiClaw_update.apk");
+            request.setMimeType("application/vnd.android.package-archive");
 
-                // 使用HttpURLConnection直接下载，处理重定向
+            // 允许移动网络和WiFi下载
+            request.setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI | DownloadManager.Request.NETWORK_MOBILE);
+
+            // 开始下载
+            downloadId = downloadManager.enqueue(request);
+
+            Toast.makeText(context, "开始下载更新...", Toast.LENGTH_SHORT).show();
+
+            // 注册下载完成监听
+            registerDownloadReceiver();
+
+        } catch (Exception e) {
+            Log.e(TAG, "DownloadManager error: " + e.getMessage(), e);
+            // 如果DownloadManager失败，使用备用下载方式
+            downloadWithHttpConnection(downloadUrl);
+        }
+    }
+
+    /**
+     * 备用下载方式 - 使用HttpURLConnection
+     */
+    private void downloadWithHttpConnection(String downloadUrl) {
+        executor.execute(() -> {
+            HttpURLConnection conn = null;
+            InputStream input = null;
+            FileOutputStream output = null;
+
+            try {
+                mainHandler.post(() -> Toast.makeText(context, "使用备用方式下载...", Toast.LENGTH_SHORT).show());
+
                 URL url = new URL(downloadUrl);
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setInstanceFollowRedirects(true);
+                conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
                 conn.setConnectTimeout(30000);
                 conn.setReadTimeout(30000);
-                conn.setRequestProperty("Accept", "application/octet-stream");
+                conn.setInstanceFollowRedirects(true);
+                conn.setRequestProperty("Accept", "application/vnd.android.package-archive");
+                conn.setRequestProperty("User-Agent", "KimiClaw-Android-App");
 
                 int responseCode = conn.getResponseCode();
-                Log.d(TAG, "Download response code: " + responseCode);
+                Log.d(TAG, "HTTP Response Code: " + responseCode);
 
                 if (responseCode == HttpURLConnection.HTTP_OK) {
                     // 获取下载目录
                     File downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+                    if (!downloadDir.exists()) {
+                        downloadDir.mkdirs();
+                    }
+
                     File apkFile = new File(downloadDir, "KimiClaw_update.apk");
 
                     // 写入文件
-                    java.io.InputStream input = conn.getInputStream();
-                    java.io.FileOutputStream output = new java.io.FileOutputStream(apkFile);
-                    byte[] buffer = new byte[4096];
+                    input = new BufferedInputStream(conn.getInputStream());
+                    output = new FileOutputStream(apkFile);
+
+                    byte[] buffer = new byte[8192];
                     int bytesRead;
                     long totalBytes = 0;
 
@@ -356,11 +400,8 @@ public class UpdateManager {
                         totalBytes += bytesRead;
                     }
 
-                    output.close();
-                    input.close();
-                    conn.disconnect();
-
-                    Log.d(TAG, "Downloaded " + totalBytes + " bytes");
+                    output.flush();
+                    Log.d(TAG, "Downloaded " + totalBytes + " bytes to " + apkFile.getAbsolutePath());
 
                     // 检查文件大小
                     if (apkFile.length() < 1000) {
@@ -369,57 +410,28 @@ public class UpdateManager {
                     }
 
                     // 安装APK
-                    mainHandler.post(() -> installApk());
+                    final File finalApkFile = apkFile;
+                    mainHandler.post(() -> installApkFile(finalApkFile));
+
                 } else {
-                    mainHandler.post(() -> Toast.makeText(context, "下载失败: " + responseCode, Toast.LENGTH_SHORT).show());
+                    final int finalResponseCode = responseCode;
+                    mainHandler.post(() -> Toast.makeText(context, "下载失败，错误码: " + finalResponseCode, Toast.LENGTH_SHORT).show());
                 }
+
             } catch (Exception e) {
-                Log.e(TAG, "Download error", e);
-                mainHandler.post(() -> Toast.makeText(context, "下载出错: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                Log.e(TAG, "Download error: " + e.getMessage(), e);
+                final String errorMsg = e.getMessage();
+                mainHandler.post(() -> Toast.makeText(context, "下载出错: " + errorMsg, Toast.LENGTH_LONG).show());
+            } finally {
+                try {
+                    if (output != null) output.close();
+                    if (input != null) input.close();
+                    if (conn != null) conn.disconnect();
+                } catch (Exception e) {
+                    Log.e(TAG, "Close error: " + e.getMessage());
+                }
             }
         });
-    }
-
-    /**
-     * 检查下载状态
-     */
-    private void startDownloadStatusCheck() {
-        new Thread(() -> {
-            boolean downloading = true;
-            while (downloading) {
-                DownloadManager.Query query = new DownloadManager.Query();
-                query.setFilterById(downloadId);
-                Cursor cursor = downloadManager.query(query);
-
-                if (cursor != null && cursor.moveToFirst()) {
-                    int statusIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS);
-                    int status = cursor.getInt(statusIndex);
-
-                    if (status == DownloadManager.STATUS_SUCCESSFUL) {
-                        downloading = false;
-                        Log.d(TAG, "Download successful");
-                    } else if (status == DownloadManager.STATUS_FAILED) {
-                        downloading = false;
-                        int reasonIndex = cursor.getColumnIndex(DownloadManager.COLUMN_REASON);
-                        int reason = cursor.getInt(reasonIndex);
-                        Log.e(TAG, "Download failed, reason: " + reason);
-                        mainHandler.post(() -> Toast.makeText(context, "下载失败，请重试", Toast.LENGTH_SHORT).show());
-                    }
-                }
-
-                if (cursor != null) {
-                    cursor.close();
-                }
-
-                if (downloading) {
-                    try {
-                        Thread.sleep(1000);
-                    } catch (InterruptedException e) {
-                        break;
-                    }
-                }
-            }
-        }).start();
     }
 
     /**
@@ -440,7 +452,11 @@ public class UpdateManager {
                 long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
                 if (id == downloadId) {
                     // 延迟一点再安装，确保文件写入完成
-                    mainHandler.postDelayed(() -> installApk(), 500);
+                    mainHandler.postDelayed(() -> {
+                        File apkFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                                "KimiClaw_update.apk");
+                        installApkFile(apkFile);
+                    }, 500);
                 }
             }
         };
@@ -450,46 +466,48 @@ public class UpdateManager {
     }
 
     /**
-     * 安装APK
+     * 安装APK文件
      */
-    private void installApk() {
-        File apkFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
-                "KimiClaw_update.apk");
-
-        if (!apkFile.exists()) {
-            Toast.makeText(context, "下载文件不存在", Toast.LENGTH_SHORT).show();
+    private void installApkFile(File apkFile) {
+        if (apkFile == null || !apkFile.exists()) {
+            Toast.makeText(context, "APK文件不存在", Toast.LENGTH_SHORT).show();
             return;
         }
 
         // 检查文件大小
         long fileSize = apkFile.length();
-        Log.d(TAG, "APK file size: " + fileSize);
+        Log.d(TAG, "APK file size: " + fileSize + " bytes, path: " + apkFile.getAbsolutePath());
 
-        if (fileSize < 1000) {
-            Toast.makeText(context, "下载文件不完整，请重试", Toast.LENGTH_SHORT).show();
+        if (fileSize < 100000) {  // 小于100KB认为不完整
+            Toast.makeText(context, "下载文件不完整(" + fileSize + "字节)，请重试", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        Intent intent = new Intent(Intent.ACTION_VIEW);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        try {
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
 
-        Uri apkUri;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            // Android 7.0+ 使用 FileProvider
-            apkUri = FileProvider.getUriForFile(context,
-                    context.getPackageName() + ".fileprovider", apkFile);
-        } else {
-            apkUri = Uri.fromFile(apkFile);
-        }
+            Uri apkUri;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                // Android 7.0+ 使用 FileProvider
+                apkUri = FileProvider.getUriForFile(context,
+                        context.getPackageName() + ".fileprovider", apkFile);
+            } else {
+                apkUri = Uri.fromFile(apkFile);
+            }
 
-        intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
+            intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
 
-        // 检查是否有应用可以处理这个intent
-        if (intent.resolveActivity(context.getPackageManager()) != null) {
-            context.startActivity(intent);
-        } else {
-            Toast.makeText(context, "无法打开安装界面，请手动安装", Toast.LENGTH_SHORT).show();
+            // 检查是否有应用可以处理这个intent
+            if (intent.resolveActivity(context.getPackageManager()) != null) {
+                context.startActivity(intent);
+            } else {
+                Toast.makeText(context, "无法打开安装界面，请手动安装", Toast.LENGTH_SHORT).show();
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Install error: " + e.getMessage(), e);
+            Toast.makeText(context, "安装失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
 
