@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/menu_bg"
+    android:padding="8dp"
+    android:elevation="20dp">
+
+    <!-- 喂养按钮 -->
+    <Button
+        android:id="@+id/btnMenuFeed"
+        android:layout_width="120dp"
+        android:layout_height="44dp"
+        android:text="🍤 喂养"
+        android:textSize="14sp"
+        android:backgroundTint="#FF6B4A"
+        android:textColor="@color/white"
+        android:layout_marginBottom="6dp" />
+
+    <!-- 抚摸按钮 -->
+    <Button
+        android:id="@+id/btnMenuPet"
+        android:layout_width="120dp"
+        android:layout_height="44dp"
+        android:text="👋 抚摸"
+        android:textSize="14sp"
+        android:backgroundTint="#FF8A6A"
+        android:textColor="@color/white"
+        android:layout_marginBottom="6dp" />
+
+    <!-- 对话按钮 -->
+    <Button
+        android:id="@+id/btnMenuChat"
+        android:layout_width="120dp"
+        android:layout_height="44dp"
+        android:text="💬 聊天"
+        android:textSize="14sp"
+        android:backgroundTint="#4CAF50"
+        android:textColor="@color/white"
+        android:layout_marginBottom="6dp" />
+
+    <!-- 设置按钮 -->
+    <Button
+        android:id="@+id/btnMenuSettings"
+        android:layout_width="120dp"
+        android:layout_height="44dp"
+        android:text="⚙️ 设置"
+        android:textSize="14sp"
+        android:backgroundTint="#757575"
+        android:textColor="@color/white" />
+
+</LinearLayout>
