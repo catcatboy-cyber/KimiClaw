@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@drawable/dialog_bg">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="📱 消息监控设置"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="@color/lobster_red"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="16dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="当指定联系人发来消息时，小龙虾会提醒你！"
+        android:textSize="12sp"
+        android:textColor="@color/gray"
+        android:layout_marginBottom="16dp" />
+
+    <!-- 添加联系人 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="16dp">
+
+        <EditText
+            android:id="@+id/contactInput"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:hint="输入联系人名称"
+            android:padding="12dp"
+            android:background="@drawable/input_bg" />
+
+        <Button
+            android:id="@+id/btnAddContact"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:text="添加"
+            android:backgroundTint="@color/lobster_red"
+            android:layout_marginStart="8dp" />
+    </LinearLayout>
+
+    <!-- 已监控列表 -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="已监控联系人："
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp" />
+
+    <ListView
+        android:id="@+id/contactList"
+        android:layout_width="match_parent"
+        android:layout_height="150dp"
+        android:divider="#EEEEEE"
+        android:dividerHeight="1dp" />
+
+    <!-- 选项 -->
+    <CheckBox
+        android:id="@+id/cbWeChat"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="监控微信"
+        android:checked="true"
+        android:layout_marginTop="8dp" />
+
+    <CheckBox
+        android:id="@+id/cbQQ"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="监控QQ"
+        android:checked="true" />
+
+    <CheckBox
+        android:id="@+id/cbShowContent"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="显示消息内容预览"
+        android:checked="false" />
+
+    <Button
+        android:id="@+id/btnSaveMonitor"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:text="保存设置"
+        android:backgroundTint="@color/lobster_red"
+        android:layout_marginTop="16dp" />
+
+</LinearLayout>

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/floatingContainer"
+    android:layout_width="80dp"
+    android:layout_height="80dp"
+    android:clickable="true"
+    android:focusable="true">
+
+    <!-- 小龙虾主体 -->
+    <TextView
+        android:id="@+id/lobsterView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:text="🦞"
+        android:textSize="60sp"
+        android:gravity="center" />
+
+    <!-- 对话气泡 -->
+    <TextView
+        android:id="@+id/speechBubble"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:minWidth="80dp"
+        android:background="@drawable/bubble_bg"
+        android:padding="8dp"
+        android:text="嗨！"
+        android:textColor="@color/black"
+        android:textSize="12sp"
+        android:visibility="gone"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginTop="-40dp" />
+
+    <!-- 饥饿提示 -->
+    <TextView
+        android:id="@+id/hungerIndicator"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="🍤"
+        android:textSize="20sp"
+        android:visibility="gone"
+        android:layout_gravity="top|end" />
+
+</FrameLayout>

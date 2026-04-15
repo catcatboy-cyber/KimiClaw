@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="lobster_red">#FF6B4A</color>
+    <color name="lobster_dark">#CC4422</color>
+    <color name="lobster_light">#FF8A6A</color>
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+    <color name="gray">#888888</color>
+    <color name="bg_transparent">#CC000000</color>
+    <color name="hunger_green">#4CAF50</color>
+    <color name="hunger_yellow">#FFC107</color>
+    <color name="hunger_red">#F44336</color>
+</resources>

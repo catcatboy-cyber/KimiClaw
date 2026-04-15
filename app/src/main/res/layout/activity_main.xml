@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="#1A1A2E">
+
+    <!-- 标题 -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="🦞 KimiClaw 小龙虾"
+        android:textSize="28sp"
+        android:textColor="@color/lobster_red"
+        android:textStyle="bold"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="32dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="你的桌面电子宠物"
+        android:textSize="14sp"
+        android:textColor="@color/gray"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="32dp" />
+
+    <!-- 状态卡片 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@drawable/card_bg"
+        android:padding="16dp"
+        android:layout_marginBottom="16dp">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="饥饿度"
+                android:textColor="@color/white"
+                android:textSize="12sp" />
+            <ProgressBar
+                android:id="@+id/hungerBar"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="60dp"
+                android:layout_height="8dp"
+                android:progress="80"
+                android:progressDrawable="@drawable/progress_hunger" />
+            <TextView
+                android:id="@+id/hungerText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="80%"
+                android:textColor="@color/hunger_green"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="心情"
+                android:textColor="@color/white"
+                android:textSize="12sp" />
+            <TextView
+                android:id="@+id/moodText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="😊 开心"
+                android:textSize="20sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="等级"
+                android:textColor="@color/white"
+                android:textSize="12sp" />
+            <TextView
+                android:id="@+id/levelText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Lv.1"
+                android:textColor="@color/lobster_red"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- 功能按钮 -->
+    <Button
+        android:id="@+id/btnStart"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:text="🚀 启动小龙虾"
+        android:textSize="16sp"
+        android:backgroundTint="@color/lobster_red"
+        android:layout_marginBottom="12dp" />
+
+    <Button
+        android:id="@+id/btnFeed"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:text="🍤 喂食"
+        android:textSize="16sp"
+        android:backgroundTint="@color/hunger_green"
+        android:layout_marginBottom="12dp" />
+
+    <Button
+        android:id="@+id/btnChat"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:text="💬 和小龙虾对话"
+        android:textSize="16sp"
+        android:backgroundTint="@color/lobster_light"
+        android:layout_marginBottom="12dp" />
+
+    <Button
+        android:id="@+id/btnMonitor"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:text="📱 消息监控设置"
+        android:textSize="16sp"
+        android:backgroundTint="#FF9800"
+        android:layout_marginBottom="12dp" />
+
+    <Button
+        android:id="@+id/btnStop"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:text="⏹ 停止小龙虾"
+        android:textSize="16sp"
+        android:backgroundTint="@color/gray" />
+
+    <!-- 说明 -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="提示：启动后小龙虾会在桌面爬动，点击可互动"
+        android:textSize="12sp"
+        android:textColor="@color/gray"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="16dp" />
+
+</LinearLayout>
