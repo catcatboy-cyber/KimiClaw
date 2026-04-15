@@ -44,6 +44,7 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int REQUEST_CODE_OVERLAY = 1001;
     private static final int REQUEST_CODE_NOTIFICATION = 1002;
+    private static final int PERMISSION_REQUEST_STORAGE = 1003;
     private static final String GLM_API_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
 
     private ProgressBar hungerBar;
@@ -421,6 +422,16 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         updateStatus();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == PERMISSION_REQUEST_STORAGE) {
+            if (updateManager != null) {
+                updateManager.onRequestPermissionsResult(requestCode, permissions, grantResults);
+            }
+        }
     }
 
     @Override

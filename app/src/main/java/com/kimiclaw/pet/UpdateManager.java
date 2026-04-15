@@ -1,7 +1,7 @@
 package com.kimiclaw.pet;
 
+import android.app.Activity;
 import android.app.DownloadManager;
-import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -14,10 +14,13 @@ import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.Settings;
 import android.util.Log;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 
 import org.json.JSONArray;
@@ -37,6 +40,7 @@ public class UpdateManager {
     private static final String TAG = "UpdateManager";
     private static final String GITHUB_API_URL = "https://api.github.com/repos/catcatboy-cyber/KimiClaw/releases/latest";
     private static final String GITHUB_RELEASES_URL = "https://github.com/catcatboy-cyber/KimiClaw/releases";
+    private static final int PERMISSION_REQUEST_CODE = 1001;
 
     private Context context;
     private SharedPreferences prefs;
@@ -46,6 +50,9 @@ public class UpdateManager {
     private long downloadId = -1;
     private DownloadManager downloadManager;
     private BroadcastReceiver downloadReceiver;
+
+    // 临时存储下载URL，等待权限授予后使用
+    private String pendingDownloadUrl = null;
 
     public UpdateManager(Context context) {
         this.context = context;
@@ -187,7 +194,7 @@ public class UpdateManager {
         builder.setMessage(releaseName + "\n\n" + releaseNotes + "\n\n文件大小: " + sizeText);
         builder.setPositiveButton("立即更新", (dialog, which) -> {
             if (downloadUrl != null) {
-                downloadAndInstall(downloadUrl);
+                startDownloadWithPermissionCheck(downloadUrl);
             } else {
                 // 如果没有找到APK链接，打开浏览器
                 Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(GITHUB_RELEASES_URL));
@@ -216,18 +223,98 @@ public class UpdateManager {
     }
 
     /**
-     * 下载并安装APK
+     * 检查权限并开始下载
      */
-    private void downloadAndInstall(String downloadUrl) {
-        // 检查存储权限
+    private void startDownloadWithPermissionCheck(String downloadUrl) {
+        this.pendingDownloadUrl = downloadUrl;
+
+        // Android 10+ (API 29+) 不需要存储权限，使用 Scoped Storage
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            downloadAndInstall(downloadUrl);
+            return;
+        }
+
+        // Android 6.0 - 9.0 需要存储权限
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (context.checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
                     != PackageManager.PERMISSION_GRANTED) {
-                Toast.makeText(context, "需要存储权限才能下载", Toast.LENGTH_SHORT).show();
+                // 没有权限，显示权限请求对话框
+                showPermissionRequestDialog();
                 return;
             }
         }
 
+        // 有权限，直接下载
+        downloadAndInstall(downloadUrl);
+    }
+
+    /**
+     * 显示权限请求对话框
+     */
+    private void showPermissionRequestDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setTitle("需要存储权限");
+        builder.setMessage("下载更新需要存储权限，用于保存APK文件到下载目录。\n\n" +
+                "请选择操作：\n\n" +
+                "📱 方法一（推荐）：点击"请求权限"直接授权\n" +
+                "⚙️ 方法二：点击"去设置"手动开启权限\n\n" +
+                "鸿蒙系统设置路径：设置 → 应用 → KimiClaw → 权限 → 存储");
+
+        builder.setPositiveButton("📱 请求权限", (dialog, which) -> {
+            // 直接请求权限
+            if (context instanceof Activity) {
+                ActivityCompat.requestPermissions((Activity) context,
+                        new String[]{android.Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                        PERMISSION_REQUEST_CODE);
+            } else {
+                Toast.makeText(context, "无法请求权限，请使用设置方式", Toast.LENGTH_SHORT).show();
+                openSettingsPage();
+            }
+        });
+
+        builder.setNeutralButton("⚙️ 去设置", (dialog, which) -> {
+            openSettingsPage();
+        });
+
+        builder.setNegativeButton("取消", null);
+        builder.show();
+    }
+
+    /**
+     * 打开应用设置页面
+     */
+    private void openSettingsPage() {
+        Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+        Uri uri = Uri.fromParts("package", context.getPackageName(), null);
+        intent.setData(uri);
+        context.startActivity(intent);
+
+        Toast.makeText(context, "请开启"存储"权限后，重新点击检查更新", Toast.LENGTH_LONG).show();
+    }
+
+    /**
+     * 处理权限请求结果（在Activity中调用）
+     */
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        if (requestCode == PERMISSION_REQUEST_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // 权限被授予，继续下载
+                if (pendingDownloadUrl != null) {
+                    downloadAndInstall(pendingDownloadUrl);
+                    pendingDownloadUrl = null;
+                }
+            } else {
+                // 权限被拒绝
+                Toast.makeText(context, "没有存储权限无法下载更新", Toast.LENGTH_SHORT).show();
+                showPermissionRequestDialog();
+            }
+        }
+    }
+
+    /**
+     * 下载并安装APK
+     */
+    private void downloadAndInstall(String downloadUrl) {
         // 删除旧文件
         File oldFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
                 "KimiClaw_update.apk");
@@ -243,6 +330,9 @@ public class UpdateManager {
         request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "KimiClaw_update.apk");
         request.setMimeType("application/vnd.android.package-archive");
 
+        // 允许移动网络和WiFi下载
+        request.setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI | DownloadManager.Request.NETWORK_MOBILE);
+
         // 开始下载
         downloadId = downloadManager.enqueue(request);
 
@@ -257,7 +347,11 @@ public class UpdateManager {
      */
     private void registerDownloadReceiver() {
         if (downloadReceiver != null) {
-            context.unregisterReceiver(downloadReceiver);
+            try {
+                context.unregisterReceiver(downloadReceiver);
+            } catch (Exception e) {
+                // 忽略
+            }
         }
 
         downloadReceiver = new BroadcastReceiver() {
