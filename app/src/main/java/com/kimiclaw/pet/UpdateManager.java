@@ -331,6 +331,7 @@ public class UpdateManager {
             return;
         }
 
+        // 尝试使用FileProvider安装
         try {
             Intent intent = new Intent(Intent.ACTION_VIEW);
             intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -338,24 +339,45 @@ public class UpdateManager {
 
             Uri apkUri;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                apkUri = FileProvider.getUriForFile(context,
-                        context.getPackageName() + ".fileprovider", apkFile);
+                String authority = context.getPackageName() + ".fileprovider";
+                Log.d(TAG, "Using FileProvider authority: " + authority);
+                apkUri = FileProvider.getUriForFile(context, authority, apkFile);
                 Log.d(TAG, "FileProvider URI: " + apkUri.toString());
             } else {
                 apkUri = Uri.fromFile(apkFile);
+                Log.d(TAG, "Using file URI: " + apkUri.toString());
             }
 
             intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
 
+            // 授予所有可能的包安装权限
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            }
+
             if (intent.resolveActivity(context.getPackageManager()) != null) {
                 context.startActivity(intent);
             } else {
-                Toast.makeText(context, "无法打开安装界面，请手动安装", Toast.LENGTH_SHORT).show();
+                Toast.makeText(context, "无法打开安装界面，请手动安装", Toast.LENGTH_LONG).show();
+                // 提示用户手动安装
+                showManualInstallDialog(apkFile);
             }
         } catch (Exception e) {
             Log.e(TAG, "Install error: " + e.getMessage(), e);
-            Toast.makeText(context, "安装失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            Toast.makeText(context, "安装失败: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            showManualInstallDialog(apkFile);
         }
+    }
+
+    /**
+     * 显示手动安装对话框
+     */
+    private void showManualInstallDialog(File apkFile) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setTitle("自动安装失败");
+        builder.setMessage("APK已下载到:\n" + apkFile.getAbsolutePath() + "\n\n请手动安装：\n1. 打开文件管理器\n2. 找到下载目录\n3. 点击KimiClaw_update.apk安装");
+        builder.setPositiveButton("知道了", null);
+        builder.show();
     }
 
     /**
