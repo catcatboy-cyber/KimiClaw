@@ -53,6 +53,7 @@ public class MainActivity extends AppCompatActivity {
     private SharedPreferences prefs;
     private SharedPreferences.Editor editor;
     private Handler mainHandler;
+    private UpdateManager updateManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,6 +63,7 @@ public class MainActivity extends AppCompatActivity {
         prefs = getSharedPreferences("KimiClawPrefs", MODE_PRIVATE);
         editor = prefs.edit();
         mainHandler = new Handler(Looper.getMainLooper());
+        updateManager = new UpdateManager(this);
 
         initViews();
         updateStatus();
@@ -114,6 +116,30 @@ public class MainActivity extends AppCompatActivity {
         btnChat.setOnClickListener(v -> showChatDialog());
         btnMonitor.setOnClickListener(v -> showMonitorDialog());
         btnSettings.setOnClickListener(v -> showSettingsDialog());
+
+        // 检查更新按钮
+        Button btnUpdate = findViewById(R.id.btnUpdate);
+        btnUpdate.setOnClickListener(v -> {
+            if (updateManager != null) {
+                updateManager.checkForUpdate(true);
+            }
+        });
+
+        // 启动时自动检查更新（每天一次）
+        checkAutoUpdate();
+    }
+
+    private void checkAutoUpdate() {
+        long lastCheck = prefs.getLong("last_update_check", 0);
+        long now = System.currentTimeMillis();
+        // 24小时检查一次
+        if (now - lastCheck > 24 * 60 * 60 * 1000) {
+            if (updateManager != null) {
+                updateManager.checkForUpdate(false);
+            }
+            editor.putLong("last_update_check", now);
+            editor.apply();
+        }
     }
 
     private void checkPermissions() {
@@ -395,6 +421,14 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         updateStatus();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (updateManager != null) {
+            updateManager.cleanup();
+        }
     }
 
     public interface GLMCallback {

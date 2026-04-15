@@ -153,6 +153,15 @@
         android:layout_marginBottom="12dp" />
 
     <Button
+        android:id="@+id/btnUpdate"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:text="🔄 检查更新"
+        android:textSize="16sp"
+        android:backgroundTint="#9C27B0"
+        android:layout_marginBottom="12dp" />
+
+    <Button
         android:id="@+id/btnStop"
         android:layout_width="match_parent"
         android:layout_height="56dp"
