@@ -55,6 +55,7 @@ public class MainActivity extends AppCompatActivity {
     private SharedPreferences.Editor editor;
     private Handler mainHandler;
     private UpdateManager updateManager;
+    private ConfigManager configManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,13 +66,47 @@ public class MainActivity extends AppCompatActivity {
         editor = prefs.edit();
         mainHandler = new Handler(Looper.getMainLooper());
         updateManager = new UpdateManager(this);
+        configManager = new ConfigManager(this);
 
         initViews();
         updateStatus();
         checkPermissions();
 
+        // 检查是否需要导入配置（首次启动且有备份）
+        checkImportConfig();
+
         // 处理外部打开的请求
         handleIntent(getIntent());
+    }
+
+    /**
+     * 检查是否需要导入配置
+     */
+    private void checkImportConfig() {
+        // 检查是否是首次启动（没有保存过API Key）
+        String savedKey = prefs.getString("glm_api_key", "");
+        boolean hasLaunched = prefs.getBoolean("has_launched", false);
+
+        if (!hasLaunched && configManager.hasBackupConfig()) {
+            // 首次启动且有备份配置，提示导入
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setTitle("发现配置备份");
+            builder.setMessage("检测到之前保存的配置文件，是否恢复？\n\n包含：\n• GLM API Key\n• 监控联系人\n• 应用设置");
+            builder.setPositiveButton("恢复配置", (dialog, which) -> {
+                if (configManager.importConfig()) {
+                    Toast.makeText(this, "配置恢复成功！", Toast.LENGTH_SHORT).show();
+                    updateStatus();
+                } else {
+                    Toast.makeText(this, "配置恢复失败", Toast.LENGTH_SHORT).show();
+                }
+            });
+            builder.setNegativeButton("暂不恢复", null);
+            builder.show();
+        }
+
+        // 标记已启动过
+        editor.putBoolean("has_launched", true);
+        editor.apply();
     }
 
     @Override
@@ -339,18 +374,32 @@ public class MainActivity extends AppCompatActivity {
         EditText apiKeyInput = view.findViewById(R.id.apiKeyInput);
         Button btnSaveKey = view.findViewById(R.id.btnSaveKey);
         Button btnGetKey = view.findViewById(R.id.btnGetKey);
+        TextView configStatusText = view.findViewById(R.id.configStatusText);
+        Button btnExportConfig = view.findViewById(R.id.btnExportConfig);
+        Button btnImportConfig = view.findViewById(R.id.btnImportConfig);
+        Button btnPermissionOverlay = view.findViewById(R.id.btnPermissionOverlay);
+        Button btnPermissionNotification = view.findViewById(R.id.btnPermissionNotification);
 
         // 加载已保存的API Key
         String savedKey = prefs.getString("glm_api_key", "");
         if (!savedKey.isEmpty()) {
-            // 只显示前8位和后4位
             String maskedKey = savedKey.substring(0, Math.min(8, savedKey.length())) + "..." +
                     savedKey.substring(Math.max(0, savedKey.length() - 4));
             apiKeyInput.setHint("已设置: " + maskedKey);
         }
 
+        // 更新配置备份状态
+        if (configManager.hasBackupConfig()) {
+            configStatusText.setText("✅ 已找到备份配置\n位置: " + configManager.getConfigFilePath());
+            configStatusText.setTextColor(getColor(android.R.color.holo_green_dark));
+        } else {
+            configStatusText.setText("❌ 未找到备份配置");
+            configStatusText.setTextColor(getColor(android.R.color.darker_gray));
+        }
+
         AlertDialog dialog = builder.create();
 
+        // API Key 按钮
         btnSaveKey.setOnClickListener(v -> {
             String apiKey = apiKeyInput.getText().toString().trim();
             if (!apiKey.isEmpty()) {
@@ -364,10 +413,54 @@ public class MainActivity extends AppCompatActivity {
         });
 
         btnGetKey.setOnClickListener(v -> {
-            // 打开智谱AI官网
             Intent intent = new Intent(Intent.ACTION_VIEW,
                     Uri.parse("https://open.bigmodel.cn/usercenter/apikeys"));
             startActivity(intent);
+        });
+
+        // 配置备份按钮
+        btnExportConfig.setOnClickListener(v -> {
+            if (configManager.exportConfig()) {
+                Toast.makeText(this, "配置已导出到下载目录！", Toast.LENGTH_LONG).show();
+                configStatusText.setText("✅ 已找到备份配置\n位置: " + configManager.getConfigFilePath());
+                configStatusText.setTextColor(getColor(android.R.color.holo_green_dark));
+            } else {
+                Toast.makeText(this, "配置导出失败，请检查存储权限", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        btnImportConfig.setOnClickListener(v -> {
+            if (configManager.hasBackupConfig()) {
+                if (configManager.importConfig()) {
+                    Toast.makeText(this, "配置恢复成功！", Toast.LENGTH_SHORT).show();
+                    updateStatus();
+                    dialog.dismiss();
+                } else {
+                    Toast.makeText(this, "配置恢复失败", Toast.LENGTH_SHORT).show();
+                }
+            } else {
+                Toast.makeText(this, "未找到备份配置，请先导出", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        // 权限设置按钮
+        btnPermissionOverlay.setOnClickListener(v -> {
+            if (!Settings.canDrawOverlays(this)) {
+                Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                        Uri.parse("package:" + getPackageName()));
+                startActivity(intent);
+            } else {
+                Toast.makeText(this, "悬浮窗权限已开启", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        btnPermissionNotification.setOnClickListener(v -> {
+            if (!isNotificationServiceEnabled()) {
+                Intent intent = new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS);
+                startActivity(intent);
+            } else {
+                Toast.makeText(this, "通知监听权限已开启", Toast.LENGTH_SHORT).show();
+            }
         });
 
         dialog.show();
