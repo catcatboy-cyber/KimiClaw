@@ -256,11 +256,11 @@ public class UpdateManager {
         builder.setTitle("需要存储权限");
         builder.setMessage("下载更新需要存储权限，用于保存APK文件到下载目录。\n\n" +
                 "请选择操作：\n\n" +
-                "📱 方法一（推荐）：点击"请求权限"直接授权\n" +
-                "⚙️ 方法二：点击"去设置"手动开启权限\n\n" +
+                "方法一（推荐）：点击[请求权限]直接授权\n" +
+                "方法二：点击[去设置]手动开启权限\n\n" +
                 "鸿蒙系统设置路径：设置 → 应用 → KimiClaw → 权限 → 存储");
 
-        builder.setPositiveButton("📱 请求权限", (dialog, which) -> {
+        builder.setPositiveButton("请求权限", (dialog, which) -> {
             // 直接请求权限
             if (context instanceof Activity) {
                 ActivityCompat.requestPermissions((Activity) context,
@@ -272,7 +272,7 @@ public class UpdateManager {
             }
         });
 
-        builder.setNeutralButton("⚙️ 去设置", (dialog, which) -> {
+        builder.setNeutralButton("去设置", (dialog, which) -> {
             openSettingsPage();
         });
 
@@ -289,7 +289,7 @@ public class UpdateManager {
         intent.setData(uri);
         context.startActivity(intent);
 
-        Toast.makeText(context, "请开启"存储"权限后，重新点击检查更新", Toast.LENGTH_LONG).show();
+        Toast.makeText(context, "请开启存储权限后，重新点击检查更新", Toast.LENGTH_LONG).show();
     }
 
     /**
