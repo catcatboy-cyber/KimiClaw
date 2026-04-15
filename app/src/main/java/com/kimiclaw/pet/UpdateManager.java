@@ -9,6 +9,7 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
@@ -190,7 +191,7 @@ public class UpdateManager {
         String sizeText = formatFileSize(fileSize);
 
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
-        builder.setTitle("🎉 发现新版本！");
+        builder.setTitle("发现新版本！");
         builder.setMessage(releaseName + "\n\n" + releaseNotes + "\n\n文件大小: " + sizeText);
         builder.setPositiveButton("立即更新", (dialog, which) -> {
             if (downloadUrl != null) {
@@ -322,24 +323,103 @@ public class UpdateManager {
             oldFile.delete();
         }
 
-        // 创建下载请求
-        DownloadManager.Request request = new DownloadManager.Request(Uri.parse(downloadUrl));
-        request.setTitle("KimiClaw 更新下载");
-        request.setDescription("正在下载最新版本...");
-        request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-        request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "KimiClaw_update.apk");
-        request.setMimeType("application/vnd.android.package-archive");
+        // 使用直接下载方式，避免重定向问题
+        executor.execute(() -> {
+            try {
+                mainHandler.post(() -> Toast.makeText(context, "开始下载更新...", Toast.LENGTH_SHORT).show());
 
-        // 允许移动网络和WiFi下载
-        request.setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI | DownloadManager.Request.NETWORK_MOBILE);
+                // 使用HttpURLConnection直接下载，处理重定向
+                URL url = new URL(downloadUrl);
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setInstanceFollowRedirects(true);
+                conn.setConnectTimeout(30000);
+                conn.setReadTimeout(30000);
+                conn.setRequestProperty("Accept", "application/octet-stream");
 
-        // 开始下载
-        downloadId = downloadManager.enqueue(request);
+                int responseCode = conn.getResponseCode();
+                Log.d(TAG, "Download response code: " + responseCode);
 
-        Toast.makeText(context, "开始下载更新...", Toast.LENGTH_SHORT).show();
+                if (responseCode == HttpURLConnection.HTTP_OK) {
+                    // 获取下载目录
+                    File downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+                    File apkFile = new File(downloadDir, "KimiClaw_update.apk");
 
-        // 注册下载完成监听
-        registerDownloadReceiver();
+                    // 写入文件
+                    java.io.InputStream input = conn.getInputStream();
+                    java.io.FileOutputStream output = new java.io.FileOutputStream(apkFile);
+                    byte[] buffer = new byte[4096];
+                    int bytesRead;
+                    long totalBytes = 0;
+
+                    while ((bytesRead = input.read(buffer)) != -1) {
+                        output.write(buffer, 0, bytesRead);
+                        totalBytes += bytesRead;
+                    }
+
+                    output.close();
+                    input.close();
+                    conn.disconnect();
+
+                    Log.d(TAG, "Downloaded " + totalBytes + " bytes");
+
+                    // 检查文件大小
+                    if (apkFile.length() < 1000) {
+                        mainHandler.post(() -> Toast.makeText(context, "下载文件不完整，请重试", Toast.LENGTH_SHORT).show());
+                        return;
+                    }
+
+                    // 安装APK
+                    mainHandler.post(() -> installApk());
+                } else {
+                    mainHandler.post(() -> Toast.makeText(context, "下载失败: " + responseCode, Toast.LENGTH_SHORT).show());
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Download error", e);
+                mainHandler.post(() -> Toast.makeText(context, "下载出错: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+            }
+        });
+    }
+
+    /**
+     * 检查下载状态
+     */
+    private void startDownloadStatusCheck() {
+        new Thread(() -> {
+            boolean downloading = true;
+            while (downloading) {
+                DownloadManager.Query query = new DownloadManager.Query();
+                query.setFilterById(downloadId);
+                Cursor cursor = downloadManager.query(query);
+
+                if (cursor != null && cursor.moveToFirst()) {
+                    int statusIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS);
+                    int status = cursor.getInt(statusIndex);
+
+                    if (status == DownloadManager.STATUS_SUCCESSFUL) {
+                        downloading = false;
+                        Log.d(TAG, "Download successful");
+                    } else if (status == DownloadManager.STATUS_FAILED) {
+                        downloading = false;
+                        int reasonIndex = cursor.getColumnIndex(DownloadManager.COLUMN_REASON);
+                        int reason = cursor.getInt(reasonIndex);
+                        Log.e(TAG, "Download failed, reason: " + reason);
+                        mainHandler.post(() -> Toast.makeText(context, "下载失败，请重试", Toast.LENGTH_SHORT).show());
+                    }
+                }
+
+                if (cursor != null) {
+                    cursor.close();
+                }
+
+                if (downloading) {
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        break;
+                    }
+                }
+            }
+        }).start();
     }
 
     /**
@@ -359,7 +439,8 @@ public class UpdateManager {
             public void onReceive(Context context, Intent intent) {
                 long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
                 if (id == downloadId) {
-                    installApk();
+                    // 延迟一点再安装，确保文件写入完成
+                    mainHandler.postDelayed(() -> installApk(), 500);
                 }
             }
         };
@@ -380,21 +461,36 @@ public class UpdateManager {
             return;
         }
 
-        Intent intent = new Intent(Intent.ACTION_VIEW);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        // 检查文件大小
+        long fileSize = apkFile.length();
+        Log.d(TAG, "APK file size: " + fileSize);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            // Android 7.0+ 使用 FileProvider
-            Uri apkUri = FileProvider.getUriForFile(context,
-                    context.getPackageName() + ".fileprovider", apkFile);
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
-        } else {
-            intent.setDataAndType(Uri.fromFile(apkFile),
-                    "application/vnd.android.package-archive");
+        if (fileSize < 1000) {
+            Toast.makeText(context, "下载文件不完整，请重试", Toast.LENGTH_SHORT).show();
+            return;
         }
 
-        context.startActivity(intent);
+        Intent intent = new Intent(Intent.ACTION_VIEW);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+        Uri apkUri;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            // Android 7.0+ 使用 FileProvider
+            apkUri = FileProvider.getUriForFile(context,
+                    context.getPackageName() + ".fileprovider", apkFile);
+        } else {
+            apkUri = Uri.fromFile(apkFile);
+        }
+
+        intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
+
+        // 检查是否有应用可以处理这个intent
+        if (intent.resolveActivity(context.getPackageManager()) != null) {
+            context.startActivity(intent);
+        } else {
+            Toast.makeText(context, "无法打开安装界面，请手动安装", Toast.LENGTH_SHORT).show();
+        }
     }
 
     /**
