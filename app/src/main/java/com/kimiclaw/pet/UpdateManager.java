@@ -9,6 +9,7 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
@@ -74,7 +75,7 @@ public class UpdateManager {
         executor.execute(() -> {
             try {
                 URL url = new URL(GITHUB_API_URL);
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
                 conn.setRequestMethod("GET");
                 conn.setRequestProperty("Accept", "application/vnd.github.v3+json");
                 conn.setConnectTimeout(10000);
@@ -235,7 +236,7 @@ public class UpdateManager {
 
         // Android 10+ (API 29+) 不需要存储权限，使用 Scoped Storage
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            downloadAndInstall(downloadUrl);
+            downloadWithHttpConnection(downloadUrl);
             return;
         }
 
@@ -250,7 +251,7 @@ public class UpdateManager {
         }
 
         // 有权限，直接下载
-        downloadAndInstall(downloadUrl);
+        downloadWithHttpConnection(downloadUrl);
     }
 
     /**
@@ -305,7 +306,7 @@ public class UpdateManager {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 // 权限被授予，继续下载
                 if (pendingDownloadUrl != null) {
-                    downloadAndInstall(pendingDownloadUrl);
+                    downloadWithHttpConnection(pendingDownloadUrl);
                     pendingDownloadUrl = null;
                 }
             } else {
@@ -317,106 +318,103 @@ public class UpdateManager {
     }
 
     /**
-     * 下载并安装APK - 使用系统DownloadManager
-     */
-    private void downloadAndInstall(String downloadUrl) {
-        // 删除旧文件
-        File oldFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
-                "KimiClaw_update.apk");
-        if (oldFile.exists()) {
-            oldFile.delete();
-        }
-
-        // 使用系统DownloadManager下载
-        try {
-            DownloadManager.Request request = new DownloadManager.Request(Uri.parse(downloadUrl));
-            request.setTitle("KimiClaw 更新下载");
-            request.setDescription("正在下载最新版本...");
-            request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-            request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "KimiClaw_update.apk");
-            request.setMimeType("application/vnd.android.package-archive");
-
-            // 允许移动网络和WiFi下载
-            request.setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI | DownloadManager.Request.NETWORK_MOBILE);
-
-            // 开始下载
-            downloadId = downloadManager.enqueue(request);
-
-            Toast.makeText(context, "开始下载更新...", Toast.LENGTH_SHORT).show();
-
-            // 注册下载完成监听
-            registerDownloadReceiver();
-
-        } catch (Exception e) {
-            Log.e(TAG, "DownloadManager error: " + e.getMessage(), e);
-            // 如果DownloadManager失败，使用备用下载方式
-            downloadWithHttpConnection(downloadUrl);
-        }
-    }
-
-    /**
-     * 备用下载方式 - 使用HttpURLConnection
+     * 使用HttpURLConnection下载APK - 处理GitHub重定向
      */
     private void downloadWithHttpConnection(String downloadUrl) {
         executor.execute(() -> {
-            HttpURLConnection conn = null;
+            HttpsURLConnection conn = null;
             InputStream input = null;
             FileOutputStream output = null;
 
             try {
-                mainHandler.post(() -> Toast.makeText(context, "使用备用方式下载...", Toast.LENGTH_SHORT).show());
+                mainHandler.post(() -> Toast.makeText(context, "开始下载更新...", Toast.LENGTH_SHORT).show());
 
-                URL url = new URL(downloadUrl);
-                conn = (HttpURLConnection) url.openConnection();
-                conn.setRequestMethod("GET");
-                conn.setConnectTimeout(30000);
-                conn.setReadTimeout(30000);
-                conn.setInstanceFollowRedirects(true);
-                conn.setRequestProperty("Accept", "application/vnd.android.package-archive");
-                conn.setRequestProperty("User-Agent", "KimiClaw-Android-App");
+                // 处理GitHub重定向
+                String finalUrl = downloadUrl;
+                int redirectCount = 0;
+                final int MAX_REDIRECTS = 5;
 
-                int responseCode = conn.getResponseCode();
-                Log.d(TAG, "HTTP Response Code: " + responseCode);
+                while (redirectCount < MAX_REDIRECTS) {
+                    URL url = new URL(finalUrl);
+                    conn = (HttpsURLConnection) url.openConnection();
+                    conn.setRequestMethod("GET");
+                    conn.setConnectTimeout(30000);
+                    conn.setReadTimeout(30000);
+                    conn.setInstanceFollowRedirects(false); // 手动处理重定向
+                    conn.setRequestProperty("Accept", "application/vnd.android.package-archive,application/octet-stream,*/*");
+                    conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 10)");
 
-                if (responseCode == HttpURLConnection.HTTP_OK) {
-                    // 获取下载目录
-                    File downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-                    if (!downloadDir.exists()) {
-                        downloadDir.mkdirs();
+                    int responseCode = conn.getResponseCode();
+                    Log.d(TAG, "HTTP Response Code: " + responseCode + " for URL: " + finalUrl);
+
+                    // 处理重定向
+                    if (responseCode == HttpURLConnection.HTTP_MOVED_PERM ||
+                            responseCode == HttpURLConnection.HTTP_MOVED_TEMP ||
+                            responseCode == HttpURLConnection.HTTP_SEE_OTHER ||
+                            responseCode == 307 || responseCode == 308) {
+                        String newUrl = conn.getHeaderField("Location");
+                        conn.disconnect();
+                        if (newUrl != null) {
+                            finalUrl = newUrl;
+                            redirectCount++;
+                            Log.d(TAG, "Redirect to: " + finalUrl);
+                            continue;
+                        } else {
+                            mainHandler.post(() -> Toast.makeText(context, "重定向失败", Toast.LENGTH_SHORT).show());
+                            return;
+                        }
                     }
 
-                    File apkFile = new File(downloadDir, "KimiClaw_update.apk");
-
-                    // 写入文件
-                    input = new BufferedInputStream(conn.getInputStream());
-                    output = new FileOutputStream(apkFile);
-
-                    byte[] buffer = new byte[8192];
-                    int bytesRead;
-                    long totalBytes = 0;
-
-                    while ((bytesRead = input.read(buffer)) != -1) {
-                        output.write(buffer, 0, bytesRead);
-                        totalBytes += bytesRead;
-                    }
-
-                    output.flush();
-                    Log.d(TAG, "Downloaded " + totalBytes + " bytes to " + apkFile.getAbsolutePath());
-
-                    // 检查文件大小
-                    if (apkFile.length() < 1000) {
-                        mainHandler.post(() -> Toast.makeText(context, "下载文件不完整，请重试", Toast.LENGTH_SHORT).show());
+                    if (responseCode == HttpURLConnection.HTTP_OK) {
+                        break; // 成功，跳出循环
+                    } else {
+                        mainHandler.post(() -> Toast.makeText(context, "下载失败，错误码: " + responseCode, Toast.LENGTH_SHORT).show());
                         return;
                     }
-
-                    // 安装APK
-                    final File finalApkFile = apkFile;
-                    mainHandler.post(() -> installApkFile(finalApkFile));
-
-                } else {
-                    final int finalResponseCode = responseCode;
-                    mainHandler.post(() -> Toast.makeText(context, "下载失败，错误码: " + finalResponseCode, Toast.LENGTH_SHORT).show());
                 }
+
+                // 获取文件大小
+                int contentLength = conn.getContentLength();
+                Log.d(TAG, "Content-Length: " + contentLength);
+
+                // 获取下载目录
+                File downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+                if (!downloadDir.exists()) {
+                    downloadDir.mkdirs();
+                }
+
+                File apkFile = new File(downloadDir, "KimiClaw_update.apk");
+
+                // 写入文件
+                input = new BufferedInputStream(conn.getInputStream());
+                output = new FileOutputStream(apkFile);
+
+                byte[] buffer = new byte[8192];
+                int bytesRead;
+                long totalBytes = 0;
+
+                while ((bytesRead = input.read(buffer)) != -1) {
+                    output.write(buffer, 0, bytesRead);
+                    totalBytes += bytesRead;
+                }
+
+                output.flush();
+                Log.d(TAG, "Downloaded " + totalBytes + " bytes to " + apkFile.getAbsolutePath());
+
+                // 关闭连接
+                conn.disconnect();
+                conn = null;
+
+                // 检查文件大小
+                long fileSize = apkFile.length();
+                if (fileSize < 100000) {  // 小于100KB认为不完整
+                    mainHandler.post(() -> Toast.makeText(context, "下载文件不完整(" + fileSize + "字节)，请重试", Toast.LENGTH_SHORT).show());
+                    return;
+                }
+
+                // 安装APK
+                final File finalApkFile = apkFile;
+                mainHandler.post(() -> installApkFile(finalApkFile));
 
             } catch (Exception e) {
                 Log.e(TAG, "Download error: " + e.getMessage(), e);
@@ -432,37 +430,6 @@ public class UpdateManager {
                 }
             }
         });
-    }
-
-    /**
-     * 注册下载完成监听
-     */
-    private void registerDownloadReceiver() {
-        if (downloadReceiver != null) {
-            try {
-                context.unregisterReceiver(downloadReceiver);
-            } catch (Exception e) {
-                // 忽略
-            }
-        }
-
-        downloadReceiver = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
-                if (id == downloadId) {
-                    // 延迟一点再安装，确保文件写入完成
-                    mainHandler.postDelayed(() -> {
-                        File apkFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
-                                "KimiClaw_update.apk");
-                        installApkFile(apkFile);
-                    }, 500);
-                }
-            }
-        };
-
-        context.registerReceiver(downloadReceiver,
-                new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
     }
 
     /**
@@ -493,6 +460,7 @@ public class UpdateManager {
                 // Android 7.0+ 使用 FileProvider
                 apkUri = FileProvider.getUriForFile(context,
                         context.getPackageName() + ".fileprovider", apkFile);
+                Log.d(TAG, "FileProvider URI: " + apkUri.toString());
             } else {
                 apkUri = Uri.fromFile(apkFile);
             }
