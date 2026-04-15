@@ -7,6 +7,10 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+  actions: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -41,17 +45,13 @@ jobs:
 
     - name: Create Release
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
         files: app/build/outputs/apk/debug/*.apk
         tag_name: v${{ github.run_number }}
         name: KimiClaw v${{ github.run_number }}
         body: |
           🦞 KimiClaw 小龙虾桌面宠物自动构建版本
-
-          ## 更新内容
-          - 自动构建于 ${{ github.event.head_commit.timestamp }}
-          - 提交: ${{ github.event.head_commit.message }}
 
           ## 安装说明
           1. 下载 APK 文件
