@@ -33,21 +33,32 @@ jobs:
       with:
         gradle-version: '8.2'
 
-    - name: Build with Gradle
-      run: gradle assembleDebug
+    - name: Create signing properties
+      run: |
+        echo "storeFile=keystore.jks" > keystore.properties
+        echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" >> keystore.properties
+        echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> keystore.properties
+        echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> keystore.properties
+
+    - name: Decode keystore
+      run: |
+        echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > app/keystore.jks
+
+    - name: Build Release APK
+      run: gradle assembleRelease
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: KimiClaw-APK
-        path: app/build/outputs/apk/debug/*.apk
+        path: app/build/outputs/apk/release/*.apk
         retention-days: 30
 
     - name: Create Release
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       uses: softprops/action-gh-release@v2
       with:
-        files: app/build/outputs/apk/debug/*.apk
+        files: app/build/outputs/apk/release/*.apk
         tag_name: v${{ github.run_number }}
         name: KimiClaw v${{ github.run_number }}
         body: |
@@ -57,5 +68,8 @@ jobs:
           1. 下载 APK 文件
           2. 允许安装未知来源应用
           3. 安装并授予悬浮窗权限
+
+          ## 注意
+          如果之前安装过旧版本，可能需要先卸载再安装（签名可能不同）
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

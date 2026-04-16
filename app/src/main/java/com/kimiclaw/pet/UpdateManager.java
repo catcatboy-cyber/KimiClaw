@@ -419,9 +419,36 @@ public class UpdateManager {
             }
         } catch (Exception e) {
             Log.e(TAG, "Install error: " + e.getMessage(), e);
-            Toast.makeText(context, "安装失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-            showManualInstallDialog(apkFile);
+            
+            // 检查是否是签名问题
+            String errorMsg = e.getMessage();
+            if (errorMsg != null && (
+                    errorMsg.contains("SIGNATURES") ||
+                    errorMsg.contains("signature") ||
+                    errorMsg.contains("签名") ||
+                    errorMsg.contains("conflict") ||
+                    errorMsg.contains("冲突"))) {
+                showSignatureErrorDialog();
+            } else {
+                Toast.makeText(context, "安装失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                showManualInstallDialog(apkFile);
+            }
         }
+    }
+
+    /**
+     * 显示签名错误对话框
+     */
+    private void showSignatureErrorDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setTitle("签名不匹配");
+        builder.setMessage("检测到签名不一致！\n\n可能原因：\n1. 旧版本是Debug签名，新版本是Release签名\n2. 从不同渠道安装的APK\n\n解决方法：\n请先卸载当前版本，再安装新版本\n（卸载后配置会丢失，建议先备份）");
+        builder.setPositiveButton("去GitHub下载", (dialog, which) -> {
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(GITHUB_RELEASES_URL));
+            context.startActivity(intent);
+        });
+        builder.setNegativeButton("取消", null);
+        builder.show();
     }
 
     /**
@@ -430,7 +457,7 @@ public class UpdateManager {
     private void showManualInstallDialog(File apkFile) {
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
         builder.setTitle("自动安装失败");
-        builder.setMessage("APK已下载到:\n" + apkFile.getAbsolutePath() + "\n\n请手动安装：\n1. 打开文件管理器\n2. 找到下载目录\n3. 点击KimiClaw_update.apk安装");
+        builder.setMessage("APK已下载到:\n" + apkFile.getAbsolutePath() + "\n\n请手动安装：\n1. 打开文件管理器\n2. 找到下载目录\n3. 点击KimiClaw_update.apk安装\n\n如果提示签名冲突，请先卸载旧版本");
         builder.setPositiveButton("知道了", null);
         builder.show();
     }
