@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">KimiClaw 小龙虾</string>
+    <string name="app_name">MelodyClaw小龙虾</string>
     <string name="start_pet">启动小龙虾</string>
     <string name="stop_pet">停止小龙虾</string>
     <string name="feed">喂食</string>
