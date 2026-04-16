@@ -386,11 +386,8 @@ public class UpdateManager {
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
 
-            if (intent.resolveActivity(context.getPackageManager()) != null) {
-                context.startActivity(intent);
-            } else {
-                Toast.makeText(context, "无法打开安装界面，请手动安装", Toast.LENGTH_LONG).show();
-            }
+            // Android 11+ resolveActivity 可能返回 null，直接尝试启动
+            context.startActivity(intent);
         } catch (Exception e) {
             String errorMsg = e.getMessage();
             Log.e(TAG, "Install error: " + errorMsg, e);
