@@ -13,6 +13,7 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.graphics.PixelFormat;
 import android.graphics.Point;
+import android.graphics.drawable.AnimationDrawable;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
@@ -27,25 +28,17 @@ import android.view.animation.ScaleAnimation;
 import android.view.animation.TranslateAnimation;
 import android.widget.Button;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.PopupWindow;
 import android.widget.TextView;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
-
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.util.Random;
 
 public class FloatingLobsterService extends Service {
 
     private WindowManager windowManager;
     private View floatingView;
-    private TextView lobsterView;
+    private ImageView lobsterImageView;
     private TextView speechBubble;
     private TextView hungerIndicator;
     private FrameLayout floatingContainer;
@@ -60,14 +53,29 @@ public class FloatingLobsterService extends Service {
     private Random random;
     private SharedPreferences prefs;
 
-    private static final int LOBSTER_SIZE = 100;
+    private static final int LOBSTER_SIZE = 90;
     private static final String CHANNEL_ID = "KimiClawChannel";
-    private static final String GLM_API_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
 
-    // 小龙虾表情集合
-    private final String[] LOBSTER_EMOJIS = {"🦞", "🦀", "🦐", "🐙"};
-    private final String[] SPEECHES = {
-        "嗨！", "我饿了~", "在呢！", "有消息吗？", "好无聊啊", "🍤", "钳！"
+    // 动画帧资源
+    private static final int[] ANIM_NORMAL = {R.drawable.lobster_normal_1, R.drawable.lobster_normal_2};
+    private static final int[] ANIM_EATING = {R.drawable.lobster_eating_1, R.drawable.lobster_eating_2};
+    private static final int[] ANIM_HUNGRY = {R.drawable.lobster_hungry_1, R.drawable.lobster_hungry_2};
+    private static final int[] ANIM_SAD = {R.drawable.lobster_sad_1, R.drawable.lobster_sad_2};
+
+    // 当前动画状态
+    private enum LobsterState { NORMAL, EATING, HUNGRY, SAD }
+    private LobsterState currentState = LobsterState.NORMAL;
+    private int currentFrame = 0;
+
+    // 小龙虾台词
+    private final String[] SPEECHES_NORMAL = {
+        "嗨！", "在呢！", "好无聊啊", "钳钳~", "主人好~"
+    };
+    private final String[] SPEECHES_HUNGRY = {
+        "我饿了...", "🍤 想吃虾虾", "肚子咕咕叫", "给点吃的吧~", "好饿呀"
+    };
+    private final String[] SPEECHES_SAD = {
+        "不开心...", "呜呜...", "想被摸摸", "好孤单", "😢"
     };
 
     @Override
@@ -82,10 +90,11 @@ public class FloatingLobsterService extends Service {
         startForeground(1, createNotification());
 
         setupFloatingWindow();
+        startFrameAnimation();
         startCrawlingAnimation();
         startHungerDecrease();
+        startStateCheck();
 
-        // 注册广播接收器
         registerReceiver(feedReceiver, new IntentFilter("com.kimiclaw.pet.FEED"));
         registerReceiver(alertReceiver, new IntentFilter("com.kimiclaw.pet.SHOW_ALERT"));
     }
@@ -118,18 +127,16 @@ public class FloatingLobsterService extends Service {
 
     private void setupFloatingWindow() {
         floatingView = LayoutInflater.from(this).inflate(R.layout.floating_lobster, null);
-        lobsterView = floatingView.findViewById(R.id.lobsterView);
+        lobsterImageView = floatingView.findViewById(R.id.lobsterImageView);
         speechBubble = floatingView.findViewById(R.id.speechBubble);
         hungerIndicator = floatingView.findViewById(R.id.hungerIndicator);
         floatingContainer = floatingView.findViewById(R.id.floatingContainer);
 
-        // 获取屏幕尺寸
         Point size = new Point();
         windowManager.getDefaultDisplay().getSize(size);
         screenWidth = size.x;
         screenHeight = size.y;
 
-        // 设置悬浮窗参数
         int type = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
                 ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
                 : WindowManager.LayoutParams.TYPE_PHONE;
@@ -148,7 +155,6 @@ public class FloatingLobsterService extends Service {
         params.x = screenWidth / 2 - LOBSTER_SIZE / 2;
         params.y = screenHeight / 2 - LOBSTER_SIZE / 2;
 
-        // 触摸事件处理
         floatingView.setOnTouchListener((v, event) -> {
             switch (event.getAction()) {
                 case MotionEvent.ACTION_DOWN:
@@ -165,7 +171,6 @@ public class FloatingLobsterService extends Service {
                     return true;
 
                 case MotionEvent.ACTION_UP:
-                    // 点击事件
                     float deltaX = event.getRawX() - touchX;
                     float deltaY = event.getRawY() - touchY;
                     if (Math.abs(deltaX) < 10 && Math.abs(deltaY) < 10) {
@@ -179,33 +184,100 @@ public class FloatingLobsterService extends Service {
         windowManager.addView(floatingView, params);
     }
 
+    /**
+     * 启动帧动画循环
+     */
+    private void startFrameAnimation() {
+        Runnable frameRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (floatingView == null || !floatingView.isAttachedToWindow()) return;
+
+                // 根据当前状态切换帧
+                int[] frames = getCurrentFrames();
+                currentFrame = (currentFrame + 1) % frames.length;
+                lobsterImageView.setImageResource(frames[currentFrame]);
+
+                // 每500ms切换一帧
+                handler.postDelayed(this, 500);
+            }
+        };
+        handler.postDelayed(frameRunnable, 500);
+    }
+
+    /**
+     * 获取当前状态的帧数组
+     */
+    private int[] getCurrentFrames() {
+        switch (currentState) {
+            case EATING:
+                return ANIM_EATING;
+            case HUNGRY:
+                return ANIM_HUNGRY;
+            case SAD:
+                return ANIM_SAD;
+            default:
+                return ANIM_NORMAL;
+        }
+    }
+
+    /**
+     * 定时检查状态，自动切换动画
+     */
+    private void startStateCheck() {
+        Runnable stateRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (floatingView == null || !floatingView.isAttachedToWindow()) return;
+
+                int hunger = prefs.getInt("hunger", 50);
+                int mood = prefs.getInt("mood", 50);
+
+                LobsterState newState = LobsterState.NORMAL;
+
+                // 优先级：饥饿 > 心情差 > 正常
+                if (hunger < 30) {
+                    newState = LobsterState.HUNGRY;
+                } else if (mood < 30) {
+                    newState = LobsterState.SAD;
+                }
+
+                // 状态改变时重置帧
+                if (newState != currentState) {
+                    currentState = newState;
+                    currentFrame = 0;
+                }
+
+                handler.postDelayed(this, 2000);
+            }
+        };
+        handler.postDelayed(stateRunnable, 2000);
+    }
+
     private void onLobsterClicked() {
         // 点击动画
         ScaleAnimation scale = new ScaleAnimation(
-                1f, 1.2f, 1f, 1.2f,
+                1f, 1.15f, 1f, 1.15f,
                 Animation.RELATIVE_TO_SELF, 0.5f,
                 Animation.RELATIVE_TO_SELF, 0.5f
         );
         scale.setDuration(150);
         scale.setRepeatMode(Animation.REVERSE);
         scale.setRepeatCount(1);
-        lobsterView.startAnimation(scale);
+        lobsterImageView.startAnimation(scale);
 
         // 显示菜单
         showMenuPopup();
     }
 
     private void showMenuPopup() {
-        // 如果菜单已显示，先关闭
         if (menuPopup != null && menuPopup.isShowing()) {
             menuPopup.dismiss();
             return;
         }
 
-        // 创建菜单视图
         View menuView = LayoutInflater.from(this).inflate(R.layout.lobster_menu, null);
 
-        // 设置按钮点击事件
         Button btnFeed = menuView.findViewById(R.id.btnMenuFeed);
         Button btnPet = menuView.findViewById(R.id.btnMenuPet);
         Button btnChat = menuView.findViewById(R.id.btnMenuChat);
@@ -231,7 +303,6 @@ public class FloatingLobsterService extends Service {
             menuPopup.dismiss();
         });
 
-        // 创建PopupWindow
         menuPopup = new PopupWindow(
                 menuView,
                 WindowManager.LayoutParams.WRAP_CONTENT,
@@ -242,7 +313,6 @@ public class FloatingLobsterService extends Service {
         menuPopup.setBackgroundDrawable(getResources().getDrawable(R.drawable.menu_bg));
         menuPopup.setElevation(20);
 
-        // 计算菜单位置（在龙虾上方或下方）
         int[] location = new int[2];
         floatingView.getLocationOnScreen(location);
         int x = location[0] + LOBSTER_SIZE / 2 - 60;
@@ -260,45 +330,50 @@ public class FloatingLobsterService extends Service {
         hunger = Math.min(100, hunger + 25);
         prefs.edit().putInt("hunger", hunger).apply();
 
-        // 喂食动画
+        // 切换到吃东西动画
+        currentState = LobsterState.EATING;
+        currentFrame = 0;
+
+        // 2秒后恢复
+        handler.postDelayed(() -> {
+            currentState = LobsterState.NORMAL;
+            currentFrame = 0;
+        }, 2000);
+
         ScaleAnimation scale = new ScaleAnimation(
-                1f, 1.4f, 1f, 1.4f,
+                1f, 1.25f, 1f, 1.25f,
                 Animation.RELATIVE_TO_SELF, 0.5f,
                 Animation.RELATIVE_TO_SELF, 0.5f
         );
         scale.setDuration(300);
         scale.setRepeatMode(Animation.REVERSE);
         scale.setRepeatCount(2);
-        lobsterView.startAnimation(scale);
+        lobsterImageView.startAnimation(scale);
 
         showSpeech("好吃！😋 谢谢主人！");
         hungerIndicator.setVisibility(View.GONE);
     }
 
     private void petLobster() {
-        // 抚摸动画
         TranslateAnimation shake = new TranslateAnimation(
-                -10, 10, 0, 0
+                -8, 8, 0, 0
         );
-        shake.setDuration(100);
+        shake.setDuration(80);
         shake.setRepeatMode(Animation.REVERSE);
-        shake.setRepeatCount(5);
-        lobsterView.startAnimation(shake);
+        shake.setRepeatCount(6);
+        lobsterImageView.startAnimation(shake);
 
-        // 随机心情回复
         String[] petReplies = {
             "好舒服~ 😊", "喜欢被摸！", "好开心！", "主人最好了！", "钳钳~ ❤️"
         };
         showSpeech(petReplies[random.nextInt(petReplies.length)]);
 
-        // 增加心情值
         int mood = prefs.getInt("mood", 50);
-        mood = Math.min(100, mood + 10);
+        mood = Math.min(100, mood + 15);
         prefs.edit().putInt("mood", mood).apply();
     }
 
     private void openChatDialog() {
-        // 打开主Activity的聊天对话框
         Intent intent = new Intent(this, MainActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         intent.putExtra("openChat", true);
@@ -306,16 +381,31 @@ public class FloatingLobsterService extends Service {
     }
 
     private void openSettings() {
-        // 打开主Activity的设置页面
         Intent intent = new Intent(this, MainActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         intent.putExtra("openSettings", true);
         startActivity(intent);
     }
 
+    /**
+     * 显示对话气泡 - 改进版
+     */
     private void showSpeech(String text) {
         speechBubble.setText(text);
         speechBubble.setVisibility(View.VISIBLE);
+
+        // 根据状态选择台词
+        String[] speeches;
+        switch (currentState) {
+            case HUNGRY:
+                speeches = SPEECHES_HUNGRY;
+                break;
+            case SAD:
+                speeches = SPEECHES_SAD;
+                break;
+            default:
+                speeches = SPEECHES_NORMAL;
+        }
 
         handler.postDelayed(() -> {
             if (speechBubble != null) {
@@ -329,15 +419,12 @@ public class FloatingLobsterService extends Service {
             @Override
             public void run() {
                 if (floatingView == null || !floatingView.isAttachedToWindow()) return;
-
-                // 如果菜单显示中，不移动
                 if (menuPopup != null && menuPopup.isShowing()) {
                     handler.postDelayed(this, 2000);
                     return;
                 }
 
-                // 随机移动
-                int moveDistance = 50 + random.nextInt(150);
+                int moveDistance = 40 + random.nextInt(120);
                 int direction = random.nextInt(4);
 
                 int targetX = params.x;
@@ -352,24 +439,35 @@ public class FloatingLobsterService extends Service {
                         break;
                     case 2:
                         targetX = Math.max(0, params.x - moveDistance);
-                        lobsterView.setScaleX(-1);
+                        lobsterImageView.setScaleX(-1);
                         break;
                     case 3:
                         targetX = Math.min(screenWidth - LOBSTER_SIZE, params.x + moveDistance);
-                        lobsterView.setScaleX(1);
+                        lobsterImageView.setScaleX(1);
                         break;
                 }
 
                 animateMove(targetX, targetY);
 
+                // 随机说话
                 if (random.nextInt(5) == 0) {
-                    showSpeech(SPEECHES[random.nextInt(SPEECHES.length)]);
+                    String[] speeches;
+                    switch (currentState) {
+                        case HUNGRY:
+                            speeches = SPEECHES_HUNGRY;
+                            break;
+                        case SAD:
+                            speeches = SPEECHES_SAD;
+                            break;
+                        default:
+                            speeches = SPEECHES_NORMAL;
+                    }
+                    showSpeech(speeches[random.nextInt(speeches.length)]);
                 }
 
                 handler.postDelayed(this, 2000 + random.nextInt(3000));
             }
         };
-
         handler.postDelayed(crawlRunnable, 1000);
     }
 
@@ -399,7 +497,7 @@ public class FloatingLobsterService extends Service {
             @Override
             public void run() {
                 int hunger = prefs.getInt("hunger", 50);
-                hunger = Math.max(0, hunger - 5);
+                hunger = Math.max(0, hunger - 3);
                 prefs.edit().putInt("hunger", hunger).apply();
 
                 if (hunger < 30) {
@@ -414,7 +512,6 @@ public class FloatingLobsterService extends Service {
                 handler.postDelayed(this, 60000);
             }
         };
-
         handler.postDelayed(hungerRunnable, 60000);
     }
 
@@ -434,91 +531,16 @@ public class FloatingLobsterService extends Service {
 
                 handler.post(() -> {
                     TranslateAnimation jump = new TranslateAnimation(
-                            0, 0, 0, -80
+                            0, 0, 0, -70
                     );
-                    jump.setDuration(250);
+                    jump.setDuration(200);
                     jump.setRepeatMode(Animation.REVERSE);
                     jump.setRepeatCount(4);
-                    lobsterView.startAnimation(jump);
+                    lobsterImageView.startAnimation(jump);
                 });
             }
         }
     };
-
-    // GLM AI 对话方法
-    public void chatWithGLM(String message, GLMCallback callback) {
-        String apiKey = prefs.getString("glm_api_key", "");
-        if (apiKey.isEmpty()) {
-            callback.onResponse("请先设置 GLM API Key！");
-            return;
-        }
-
-        new Thread(() -> {
-            try {
-                URL url = new URL(GLM_API_URL);
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setRequestMethod("POST");
-                conn.setRequestProperty("Authorization", "Bearer " + apiKey);
-                conn.setRequestProperty("Content-Type", "application/json");
-                conn.setDoOutput(true);
-                conn.setConnectTimeout(30000);
-                conn.setReadTimeout(30000);
-
-                // 构建请求体
-                JSONObject requestBody = new JSONObject();
-                requestBody.put("model", "glm-4-flash");
-
-                JSONArray messages = new JSONArray();
-                JSONObject systemMsg = new JSONObject();
-                systemMsg.put("role", "system");
-                systemMsg.put("content", "你是一只可爱的桌面小龙虾宠物，名字叫KimiClaw。你会用可爱、俏皮的语气回复用户，偶尔使用emoji。你的性格活泼可爱，喜欢帮助主人。");
-                messages.put(systemMsg);
-
-                JSONObject userMsg = new JSONObject();
-                userMsg.put("role", "user");
-                userMsg.put("content", message);
-                messages.put(userMsg);
-
-                requestBody.put("messages", messages);
-
-                // 发送请求
-                OutputStream os = conn.getOutputStream();
-                os.write(requestBody.toString().getBytes(StandardCharsets.UTF_8));
-                os.close();
-
-                // 读取响应
-                BufferedReader reader = new BufferedReader(
-                        new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8)
-                );
-                StringBuilder response = new StringBuilder();
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    response.append(line);
-                }
-                reader.close();
-
-                // 解析响应
-                JSONObject jsonResponse = new JSONObject(response.toString());
-                JSONArray choices = jsonResponse.getJSONArray("choices");
-                if (choices.length() > 0) {
-                    JSONObject choice = choices.getJSONObject(0);
-                    JSONObject messageObj = choice.getJSONObject("message");
-                    String content = messageObj.getString("content");
-                    callback.onResponse(content);
-                } else {
-                    callback.onResponse("我卡住了，再试一次吧~");
-                }
-
-            } catch (Exception e) {
-                e.printStackTrace();
-                callback.onResponse("网络出问题了，检查一下API Key吧！");
-            }
-        }).start();
-    }
-
-    public interface GLMCallback {
-        void onResponse(String response);
-    }
 
     @Override
     public IBinder onBind(Intent intent) {

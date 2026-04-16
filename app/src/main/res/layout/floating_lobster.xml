@@ -1,41 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/floatingContainer"
-    android:layout_width="100dp"
-    android:layout_height="100dp"
+    android:layout_width="90dp"
+    android:layout_height="90dp"
     android:clickable="true"
     android:focusable="true">
 
-    <!-- 小龙虾主体 -->
-    <TextView
-        android:id="@+id/lobsterView"
+    <!-- 小龙虾主体 - 使用ImageView显示帧动画 -->
+    <ImageView
+        android:id="@+id/lobsterImageView"
         android:layout_width="80dp"
         android:layout_height="80dp"
-        android:text="🦞"
-        android:textSize="60sp"
-        android:gravity="center"
         android:layout_gravity="center"
-        android:includeFontPadding="false"
-        android:lineSpacingExtra="0dp" />
+        android:scaleType="fitCenter"
+        android:src="@drawable/lobster_normal_1" />
 
-    <!-- 对话气泡 -->
+    <!-- 对话气泡 - 改进显示 -->
     <TextView
         android:id="@+id/speechBubble"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:minWidth="100dp"
-        android:maxWidth="200dp"
+        android:minWidth="120dp"
+        android:maxWidth="220dp"
         android:background="@drawable/bubble_bg"
         android:padding="10dp"
         android:text="嗨！"
         android:textColor="@color/black"
         android:textSize="13sp"
+        android:maxLines="4"
+        android:ellipsize="end"
         android:visibility="gone"
         android:layout_gravity="top|center_horizontal"
-        android:layout_marginTop="-50dp"
+        android:layout_marginTop="-55dp"
         android:elevation="10dp"
-        android:maxLines="3"
-        android:ellipsize="end" />
+        android:gravity="center" />
 
     <!-- 饥饿提示 -->
     <TextView
