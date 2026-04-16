@@ -304,18 +304,16 @@ public class UpdateManager {
                             Log.d(TAG, "Downloaded file URI: " + localUri);
 
                             mainHandler.post(() -> {
-                                File apkFile;
                                 if (localUri != null) {
-                                    // 使用 DownloadManager 返回的真实路径
-                                    apkFile = new File(Uri.parse(localUri).getPath());
+                                    // 使用 DownloadManager 返回的 URI
+                                    Uri apkUri = Uri.parse(localUri);
+                                    installApkFromUri(apkUri);
                                 } else {
                                     // 备用：使用硬编码路径
-                                    apkFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                                    File apkFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
                                             "KimiClaw_update.apk");
+                                    installApkFile(apkFile);
                                 }
-                                Log.d(TAG, "APK file path: " + apkFile.getAbsolutePath());
-                                Log.d(TAG, "APK file exists: " + apkFile.exists());
-                                installApkFile(apkFile);
                             });
                         } else if (status == DownloadManager.STATUS_FAILED) {
                             int reasonIndex = cursor.getColumnIndex(DownloadManager.COLUMN_REASON);
@@ -332,6 +330,30 @@ public class UpdateManager {
 
         context.registerReceiver(downloadReceiver,
                 new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
+    }
+
+    /**
+     * 使用URI直接安装APK（从DownloadManager）
+     */
+    private void installApkFromUri(Uri apkUri) {
+        Log.d(TAG, "Installing from URI: " + apkUri.toString());
+
+        try {
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
+
+            if (intent.resolveActivity(context.getPackageManager()) != null) {
+                context.startActivity(intent);
+            } else {
+                Toast.makeText(context, "无法打开安装界面，请手动安装", Toast.LENGTH_LONG).show();
+            }
+        } catch (Exception e) {
+            String errorMsg = e.getMessage();
+            Log.e(TAG, "Install error: " + errorMsg, e);
+            Toast.makeText(context, "安装失败: " + errorMsg, Toast.LENGTH_LONG).show();
+        }
     }
 
     /**
