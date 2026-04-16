@@ -338,17 +338,53 @@ public class UpdateManager {
         // 校验文件头，确认是 ZIP/APK 格式
         try {
             java.io.FileInputStream fis = new java.io.FileInputStream(apkFile);
-            byte[] header = new byte[4];
+            byte[] header = new byte[16];
             int read = fis.read(header);
             fis.close();
-            if (read < 2 || header[0] != 0x50 || header[1] != 0x4B) {
-                Log.e(TAG, "File is not a valid APK! Header: " + 
+            
+            // 打印完整文件头信息
+            StringBuilder headerHex = new StringBuilder("File Header (" + read + " bytes): ");
+            StringBuilder headerAscii = new StringBuilder("ASCII: ");
+            for (int i = 0; i < Math.min(read, 16); i++) {
+                headerHex.append(String.format("%02X ", header[i]));
+                char c = (char) (header[i] & 0xFF);
+                headerAscii.append((c >= 32 && c < 127) ? c : '.');
+            }
+            Log.d(TAG, headerHex.toString());
+            Log.d(TAG, headerAscii.toString());
+            
+            if (read < 2) {
+                Log.e(TAG, "File header too short: " + read + " bytes");
+                Toast.makeText(context, "下载文件不完整，请重试", Toast.LENGTH_LONG).show();
+                apkFile.delete();
+                return;
+            }
+            
+            // APK/ZIP文件头应该是 0x50 0x4B (PK)
+            if (header[0] != 0x50 || header[1] != 0x4B) {
+                Log.e(TAG, "Invalid APK header! Expected: 50 4B, Got: " + 
                     String.format("%02X %02X", header[0], header[1]));
-                Toast.makeText(context, "下载内容不是有效APK（可能是网页），请用浏览器直接下载", 
+                
+                // 检查是否是HTML错误页面
+                if (read >= 15) {
+                    String possibleHtml = new String(header, 0, 15, StandardCharsets.UTF_8).toLowerCase();
+                    Log.e(TAG, "Possible content type: " + possibleHtml);
+                    if (possibleHtml.contains("<!doctype") || possibleHtml.contains("<html")) {
+                        Toast.makeText(context, "下载的是HTML页面而非APK，请检查网络或手动下载", 
+                            Toast.LENGTH_LONG).show();
+                        apkFile.delete();
+                        return;
+                    }
+                }
+                
+                Toast.makeText(context, "下载内容不是有效APK（文件头错误），请用浏览器下载", 
                     Toast.LENGTH_LONG).show();
                 apkFile.delete();
                 return;
             }
+            
+            Log.d(TAG, "APK header validation passed!");
+            
         } catch (Exception e) {
             Log.e(TAG, "Header check failed", e);
         }

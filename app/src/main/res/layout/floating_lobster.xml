@@ -6,14 +6,12 @@
     android:clickable="true"
     android:focusable="true">
 
-    <!-- 小龙虾主体 - 使用ImageView显示帧动画 -->
-    <ImageView
-        android:id="@+id/lobsterImageView"
+    <!-- 小龙虾主体 - 使用Canvas绘制 -->
+    <com.kimiclaw.pet.LobsterView
+        android:id="@+id/lobsterView"
         android:layout_width="80dp"
         android:layout_height="80dp"
-        android:layout_gravity="center"
-        android:scaleType="fitCenter"
-        android:src="@drawable/lobster_normal_1" />
+        android:layout_gravity="center" />
 
     <!-- 对话气泡 - 改进显示 -->
     <TextView
