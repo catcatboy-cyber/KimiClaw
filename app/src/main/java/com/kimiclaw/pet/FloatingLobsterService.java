@@ -37,10 +37,14 @@ public class FloatingLobsterService extends Service {
     private WindowManager windowManager;
     private View floatingView;
     private LobsterView lobsterView;
+    private TextView speechBubble;
     private TextView hungerIndicator;
     private FrameLayout floatingContainer;
     private PopupWindow menuPopup;
-    private PopupWindow speechPopup;
+
+    private int petSize;
+    private int bubbleHeight;
+    private int bubbleMargin = 10;
 
     private WindowManager.LayoutParams params;
     private int screenWidth, screenHeight;
@@ -118,8 +122,14 @@ public class FloatingLobsterService extends Service {
     private void setupFloatingWindow() {
         floatingView = LayoutInflater.from(this).inflate(R.layout.floating_lobster, null);
         lobsterView = floatingView.findViewById(R.id.lobsterView);
+        speechBubble = floatingView.findViewById(R.id.speechBubble);
         hungerIndicator = floatingView.findViewById(R.id.hungerIndicator);
         floatingContainer = floatingView.findViewById(R.id.floatingContainer);
+
+        // 初始化尺寸（dp转px）
+        petSize = (int) (100 * getResources().getDisplayMetrics().density);
+        bubbleHeight = (int) (60 * getResources().getDisplayMetrics().density);
+        bubbleMargin = (int) (10 * getResources().getDisplayMetrics().density);
 
         // 设置初始状态
         updateLobsterState();
@@ -287,7 +297,10 @@ public class FloatingLobsterService extends Service {
         menuPopup.setElevation(20);
 
         // 使用 showAsDropDown 让菜单跟随龙虾，显示在上方
-        menuPopup.showAsDropDown(floatingView, 0, -400);
+        // x偏移：居中；y偏移：在龙虾上方
+        int menuWidth = 240;
+        int xOffset = (LOBSTER_SIZE - menuWidth) / 2;
+        menuPopup.showAsDropDown(floatingView, xOffset, -320);
     }
 
     private void feedLobster() {
@@ -351,34 +364,40 @@ public class FloatingLobsterService extends Service {
     }
 
     private void showSpeech(String text) {
-        // 关闭之前的冒泡
-        if (speechPopup != null && speechPopup.isShowing()) {
-            speechPopup.dismiss();
+        // 设置冒泡文字
+        speechBubble.setText(text);
+        speechBubble.setVisibility(View.VISIBLE);
+
+        // 计算新高度：宠物 + 冒泡 + 间距
+        int newHeight = petSize + bubbleHeight + bubbleMargin;
+
+        // 更新容器高度和位置（容器上移，让宠物保持在原位置）
+        params.height = newHeight;
+        params.y = params.y - bubbleHeight - bubbleMargin;
+
+        // 确保不超出屏幕顶部
+        if (params.y < 0) {
+            params.y = 0;
         }
 
-        // 创建冒泡视图
-        View bubbleView = LayoutInflater.from(this).inflate(R.layout.speech_bubble, null);
-        TextView bubbleText = bubbleView.findViewById(R.id.bubbleText);
-        bubbleText.setText(text);
+        windowManager.updateViewLayout(floatingView, params);
 
-        speechPopup = new PopupWindow(
-            bubbleView,
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            false
-        );
-        speechPopup.setBackgroundDrawable(getResources().getDrawable(R.drawable.bubble_bg));
-        speechPopup.setElevation(20);
-
-        // 使用 showAsDropDown 让冒泡跟随龙虾，显示在上方
-        speechPopup.showAsDropDown(floatingView, 0, -150);
-
-        // 4秒后自动关闭
+        // 4秒后隐藏冒泡
         handler.postDelayed(() -> {
-            if (speechPopup != null && speechPopup.isShowing()) {
-                speechPopup.dismiss();
-            }
+            hideSpeech();
         }, 4000);
+    }
+
+    private void hideSpeech() {
+        if (speechBubble != null) {
+            speechBubble.setVisibility(View.GONE);
+
+            // 恢复容器高度和位置
+            params.height = petSize;
+            params.y = params.y + bubbleHeight + bubbleMargin;
+
+            windowManager.updateViewLayout(floatingView, params);
+        }
     }
 
     private void startCrawlingAnimation() {
@@ -521,9 +540,6 @@ public class FloatingLobsterService extends Service {
         }
         if (menuPopup != null && menuPopup.isShowing()) {
             menuPopup.dismiss();
-        }
-        if (speechPopup != null && speechPopup.isShowing()) {
-            speechPopup.dismiss();
         }
         unregisterReceiver(feedReceiver);
         unregisterReceiver(alertReceiver);

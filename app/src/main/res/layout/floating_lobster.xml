@@ -6,12 +6,31 @@
     android:clickable="true"
     android:focusable="true">
 
+    <!-- 冒泡文字 - 默认隐藏 -->
+    <TextView
+        android:id="@+id/speechBubble"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:minWidth="120dp"
+        android:maxWidth="180dp"
+        android:background="@drawable/bubble_bg"
+        android:padding="10dp"
+        android:text="嗨！"
+        android:textColor="@color/black"
+        android:textSize="13sp"
+        android:maxLines="4"
+        android:ellipsize="end"
+        android:visibility="gone"
+        android:layout_gravity="top|center_horizontal"
+        android:gravity="center" />
+
     <!-- 小龙虾主体 - 使用Canvas绘制 -->
     <com.kimiclaw.pet.LobsterView
         android:id="@+id/lobsterView"
         android:layout_width="100dp"
         android:layout_height="100dp"
-        android:layout_gravity="center" />
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="5dp" />
 
     <!-- 饥饿提示 -->
     <TextView
