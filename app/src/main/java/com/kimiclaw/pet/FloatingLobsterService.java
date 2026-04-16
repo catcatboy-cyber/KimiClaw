@@ -41,6 +41,7 @@ public class FloatingLobsterService extends Service {
     private TextView hungerIndicator;
     private FrameLayout floatingContainer;
     private PopupWindow menuPopup;
+    private PopupWindow messagePopup;
 
     private int petSize;
     private int bubbleHeight;
@@ -362,8 +363,6 @@ public class FloatingLobsterService extends Service {
         intent.putExtra("openSettings", true);
         startActivity(intent);
     }
-
-    private PopupWindow messagePopup;
 
     private void showMessagePopup(String sender, String content) {
         // 关闭之前的弹窗
