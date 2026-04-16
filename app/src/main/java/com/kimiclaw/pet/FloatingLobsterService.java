@@ -363,6 +363,84 @@ public class FloatingLobsterService extends Service {
         startActivity(intent);
     }
 
+    private PopupWindow messagePopup;
+
+    private void showMessagePopup(String sender, String content) {
+        // 关闭之前的弹窗
+        if (messagePopup != null && messagePopup.isShowing()) {
+            messagePopup.dismiss();
+        }
+
+        // 创建消息弹窗视图
+        View popupView = LayoutInflater.from(this).inflate(R.layout.message_popup, null);
+
+        TextView tvSender = popupView.findViewById(R.id.tvSender);
+        TextView tvContent = popupView.findViewById(R.id.tvContent);
+        View btnOpen = popupView.findViewById(R.id.btnOpen);
+        View btnDismiss = popupView.findViewById(R.id.btnDismiss);
+
+        tvSender.setText("👤 " + sender);
+        // 截断过长的消息
+        String preview = content.length() > 50 ? content.substring(0, 50) + "..." : content;
+        tvContent.setText(preview);
+
+        messagePopup = new PopupWindow(
+            popupView,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            false
+        );
+        messagePopup.setBackgroundDrawable(getResources().getDrawable(R.drawable.message_popup_bg));
+        messagePopup.setElevation(20);
+        messagePopup.setOutsideTouchable(true);
+
+        // 点击打开微信
+        btnOpen.setOnClickListener(v -> {
+            openWeChat();
+            messagePopup.dismiss();
+        });
+
+        // 点击关闭
+        btnDismiss.setOnClickListener(v -> {
+            messagePopup.dismiss();
+        });
+
+        // 计算位置：在龙虾旁边
+        int[] location = new int[2];
+        floatingView.getLocationOnScreen(location);
+        int popupWidth = 280;
+        int x = location[0] + LOBSTER_SIZE + 20;
+        int y = location[1];
+
+        // 确保不超出屏幕右边界
+        if (x + popupWidth > screenWidth - 20) {
+            x = location[0] - popupWidth - 20;
+        }
+
+        messagePopup.showAtLocation(floatingView, Gravity.NO_GRAVITY, x, y);
+
+        // 10秒后自动关闭
+        handler.postDelayed(() -> {
+            if (messagePopup != null && messagePopup.isShowing()) {
+                messagePopup.dismiss();
+            }
+        }, 10000);
+    }
+
+    private void openWeChat() {
+        try {
+            Intent intent = getPackageManager().getLaunchIntentForPackage("com.tencent.mm");
+            if (intent != null) {
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intent);
+            } else {
+                Toast.makeText(this, "未找到微信", Toast.LENGTH_SHORT).show();
+            }
+        } catch (Exception e) {
+            Toast.makeText(this, "打开微信失败", Toast.LENGTH_SHORT).show();
+        }
+    }
+
     private void showSpeech(String text) {
         // 设置冒泡文字
         speechBubble.setText(text);
@@ -510,20 +588,29 @@ public class FloatingLobsterService extends Service {
     private BroadcastReceiver alertReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
+            String sender = intent.getStringExtra("sender");
+            String content = intent.getStringExtra("content");
             String message = intent.getStringExtra("message");
-            if (message != null) {
-                showSpeech(message);
 
-                handler.post(() -> {
-                    TranslateAnimation jump = new TranslateAnimation(
-                            0, 0, 0, -70
-                    );
-                    jump.setDuration(200);
-                    jump.setRepeatMode(Animation.REVERSE);
-                    jump.setRepeatCount(4);
-                    lobsterView.startAnimation(jump);
-                });
+            if (sender != null && content != null) {
+                // 显示消息弹窗
+                showMessagePopup(sender, content);
+                // 同时让龙虾说话
+                showSpeech("📱 " + sender + " 发来消息！");
+            } else if (message != null) {
+                // 兼容旧格式
+                showSpeech(message);
             }
+
+            handler.post(() -> {
+                TranslateAnimation jump = new TranslateAnimation(
+                        0, 0, 0, -70
+                );
+                jump.setDuration(200);
+                jump.setRepeatMode(Animation.REVERSE);
+                jump.setRepeatCount(4);
+                lobsterView.startAnimation(jump);
+            });
         }
     };
 
@@ -540,6 +627,9 @@ public class FloatingLobsterService extends Service {
         }
         if (menuPopup != null && menuPopup.isShowing()) {
             menuPopup.dismiss();
+        }
+        if (messagePopup != null && messagePopup.isShowing()) {
+            messagePopup.dismiss();
         }
         unregisterReceiver(feedReceiver);
         unregisterReceiver(alertReceiver);
