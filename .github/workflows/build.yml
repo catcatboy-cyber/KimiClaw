@@ -62,6 +62,14 @@ jobs:
         path: app/build/outputs/apk/release/*.apk
         retention-days: 30
 
+    - name: Delete old release if exists
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: |
+        gh release delete "v${{ steps.get_version.outputs.version }}" --yes || true
+        gh api --method DELETE /repos/${{ github.repository }}/git/refs/tags/v${{ steps.get_version.outputs.version }} || true
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
     - name: Create Release
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       uses: softprops/action-gh-release@v2
