@@ -298,9 +298,23 @@ public class UpdateManager {
                         int status = cursor.getInt(statusIndex);
 
                         if (status == DownloadManager.STATUS_SUCCESSFUL) {
+                            // 获取实际下载的文件路径
+                            int uriIndex = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI);
+                            String localUri = cursor.getString(uriIndex);
+                            Log.d(TAG, "Downloaded file URI: " + localUri);
+
                             mainHandler.post(() -> {
-                                File apkFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
-                                        "KimiClaw_update.apk");
+                                File apkFile;
+                                if (localUri != null) {
+                                    // 使用 DownloadManager 返回的真实路径
+                                    apkFile = new File(Uri.parse(localUri).getPath());
+                                } else {
+                                    // 备用：使用硬编码路径
+                                    apkFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                                            "KimiClaw_update.apk");
+                                }
+                                Log.d(TAG, "APK file path: " + apkFile.getAbsolutePath());
+                                Log.d(TAG, "APK file exists: " + apkFile.exists());
                                 installApkFile(apkFile);
                             });
                         } else if (status == DownloadManager.STATUS_FAILED) {
