@@ -330,65 +330,47 @@ public class UpdateManager {
         }
 
         long fileSize = apkFile.length();
-        Log.d(TAG, "APK file size: " + fileSize + " bytes, path: " + apkFile.getAbsolutePath());
-
-        if (fileSize < 100000) {
-            Toast.makeText(context, "下载文件不完整(" + fileSize + "字节)，请重试", Toast.LENGTH_SHORT).show();
-            return;
-        }
+        final String[] fileHeader = new String[]{"未检查"};
+        final String[] headerType = new String[]{"未知"};
 
         // 校验文件头，确认是 ZIP/APK 格式
         try {
             java.io.FileInputStream fis = new java.io.FileInputStream(apkFile);
-            byte[] header = new byte[16];
+            byte[] header = new byte[4];
             int read = fis.read(header);
             fis.close();
             
-            // 打印完整文件头信息
-            StringBuilder headerHex = new StringBuilder("File Header (" + read + " bytes): ");
-            StringBuilder headerAscii = new StringBuilder("ASCII: ");
-            for (int i = 0; i < Math.min(read, 16); i++) {
-                headerHex.append(String.format("%02X ", header[i]));
-                char c = (char) (header[i] & 0xFF);
-                headerAscii.append((c >= 32 && c < 127) ? c : '.');
+            // 保存文件头信息
+            StringBuilder hex = new StringBuilder();
+            for (int i = 0; i < Math.min(read, 4); i++) {
+                hex.append(String.format("%02X ", header[i]));
             }
-            Log.d(TAG, headerHex.toString());
-            Log.d(TAG, headerAscii.toString());
+            fileHeader[0] = hex.toString().trim();
             
-            if (read < 2) {
-                Log.e(TAG, "File header too short: " + read + " bytes");
-                Toast.makeText(context, "下载文件不完整，请重试", Toast.LENGTH_LONG).show();
-                apkFile.delete();
-                return;
+            // 判断文件类型
+            if (read >= 2 && header[0] == 0x50 && header[1] == 0x4B) {
+                headerType[0] = "正常APK文件";
+            } else if (read >= 2 && header[0] == 0x3C && header[1] == 0x21) {
+                headerType[0] = "HTML页面(网络拦截)";
+            } else {
+                headerType[0] = "未知/损坏";
             }
             
-            // APK/ZIP文件头应该是 0x50 0x4B (PK)
-            if (header[0] != 0x50 || header[1] != 0x4B) {
-                Log.e(TAG, "Invalid APK header! Expected: 50 4B, Got: " + 
-                    String.format("%02X %02X", header[0], header[1]));
-                
-                // 检查是否是HTML错误页面
-                if (read >= 15) {
-                    String possibleHtml = new String(header, 0, 15, StandardCharsets.UTF_8).toLowerCase();
-                    Log.e(TAG, "Possible content type: " + possibleHtml);
-                    if (possibleHtml.contains("<!doctype") || possibleHtml.contains("<html")) {
-                        Toast.makeText(context, "下载的是HTML页面而非APK，请检查网络或手动下载", 
-                            Toast.LENGTH_LONG).show();
-                        apkFile.delete();
-                        return;
-                    }
-                }
-                
-                Toast.makeText(context, "下载内容不是有效APK（文件头错误），请用浏览器下载", 
-                    Toast.LENGTH_LONG).show();
-                apkFile.delete();
-                return;
-            }
-            
-            Log.d(TAG, "APK header validation passed!");
+            Log.d(TAG, "File header: " + fileHeader[0] + ", Type: " + headerType[0]);
             
         } catch (Exception e) {
-            Log.e(TAG, "Header check failed", e);
+            fileHeader[0] = "读取失败";
+            headerType[0] = e.getMessage();
+        }
+
+        if (fileSize < 100000) {
+            showInstallErrorDialog("文件不完整", fileHeader[0], headerType[0], fileSize, "文件太小");
+            return;
+        }
+
+        if (!headerType[0].equals("正常APK文件")) {
+            showInstallErrorDialog("文件头错误", fileHeader[0], headerType[0], fileSize, "不是有效APK");
+            return;
         }
 
         try {
@@ -399,12 +381,9 @@ public class UpdateManager {
             Uri apkUri;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 String authority = context.getPackageName() + ".fileprovider";
-                Log.d(TAG, "Using FileProvider authority: " + authority);
                 apkUri = FileProvider.getUriForFile(context, authority, apkFile);
-                Log.d(TAG, "FileProvider URI: " + apkUri.toString());
             } else {
                 apkUri = Uri.fromFile(apkFile);
-                Log.d(TAG, "Using file URI: " + apkUri.toString());
             }
 
             intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
@@ -417,25 +396,42 @@ public class UpdateManager {
                 context.startActivity(intent);
             } else {
                 Toast.makeText(context, "无法打开安装界面，请手动安装", Toast.LENGTH_LONG).show();
-                showManualInstallDialog(apkFile);
             }
         } catch (Exception e) {
-            Log.e(TAG, "Install error: " + e.getMessage(), e);
-            
-            // 检查是否是签名问题
             String errorMsg = e.getMessage();
             if (errorMsg != null && (
                     errorMsg.contains("SIGNATURES") ||
                     errorMsg.contains("signature") ||
-                    errorMsg.contains("签名") ||
-                    errorMsg.contains("conflict") ||
-                    errorMsg.contains("冲突"))) {
-                showSignatureErrorDialog();
+                    errorMsg.contains("conflict"))) {
+                showInstallErrorDialog("签名不匹配", fileHeader[0], headerType[0], fileSize, errorMsg);
             } else {
-                Toast.makeText(context, "安装失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                showManualInstallDialog(apkFile);
+                showInstallErrorDialog("安装失败", fileHeader[0], headerType[0], fileSize, errorMsg);
             }
         }
+    }
+
+    /**
+     * 显示安装错误对话框
+     */
+    private void showInstallErrorDialog(String title, String header, String type, long size, String error) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setTitle("❌ " + title);
+        builder.setMessage(
+            "文件头: " + header + "\n" +
+            "类型: " + type + "\n" +
+            "文件大小: " + formatFileSize(size) + "\n\n" +
+            "错误信息:\n" + (error != null ? error : "未知错误") + "\n\n" +
+            "可能原因:\n" +
+            "• 签名不匹配（需卸载重装）\n" +
+            "• 下载被拦截（用浏览器下载）\n" +
+            "• 文件损坏（重新下载）"
+        );
+        builder.setPositiveButton("去GitHub下载", (dialog, which) -> {
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(GITHUB_RELEASES_URL));
+            context.startActivity(intent);
+        });
+        builder.setNegativeButton("关闭", null);
+        builder.show();
     }
 
     /**
