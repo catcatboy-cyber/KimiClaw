@@ -37,10 +37,10 @@ public class FloatingLobsterService extends Service {
     private WindowManager windowManager;
     private View floatingView;
     private LobsterView lobsterView;
-    private TextView speechBubble;
     private TextView hungerIndicator;
     private FrameLayout floatingContainer;
     private PopupWindow menuPopup;
+    private PopupWindow speechPopup;
 
     private WindowManager.LayoutParams params;
     private int screenWidth, screenHeight;
@@ -118,7 +118,6 @@ public class FloatingLobsterService extends Service {
     private void setupFloatingWindow() {
         floatingView = LayoutInflater.from(this).inflate(R.layout.floating_lobster, null);
         lobsterView = floatingView.findViewById(R.id.lobsterView);
-        speechBubble = floatingView.findViewById(R.id.speechBubble);
         hungerIndicator = floatingView.findViewById(R.id.hungerIndicator);
         floatingContainer = floatingView.findViewById(R.id.floatingContainer);
 
@@ -372,12 +371,43 @@ public class FloatingLobsterService extends Service {
     }
 
     private void showSpeech(String text) {
-        speechBubble.setText(text);
-        speechBubble.setVisibility(View.VISIBLE);
+        // 关闭之前的冒泡
+        if (speechPopup != null && speechPopup.isShowing()) {
+            speechPopup.dismiss();
+        }
 
+        // 创建冒泡视图
+        View bubbleView = LayoutInflater.from(this).inflate(R.layout.speech_bubble, null);
+        TextView bubbleText = bubbleView.findViewById(R.id.bubbleText);
+        bubbleText.setText(text);
+
+        speechPopup = new PopupWindow(
+            bubbleView,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            false
+        );
+        speechPopup.setBackgroundDrawable(getResources().getDrawable(R.drawable.bubble_bg));
+        speechPopup.setElevation(20);
+
+        // 计算位置：在龙虾上方
+        int[] location = new int[2];
+        floatingView.getLocationOnScreen(location);
+        int bubbleWidth = 200;
+        int x = location[0] + LOBSTER_SIZE / 2 - bubbleWidth / 2;
+        int y = location[1] - 100;
+
+        // 确保不超出屏幕
+        if (x < 10) x = 10;
+        if (x + bubbleWidth > screenWidth - 10) x = screenWidth - bubbleWidth - 10;
+        if (y < 50) y = location[1] + LOBSTER_SIZE + 20;
+
+        speechPopup.showAtLocation(floatingView, Gravity.NO_GRAVITY, x, y);
+
+        // 4秒后自动关闭
         handler.postDelayed(() -> {
-            if (speechBubble != null) {
-                speechBubble.setVisibility(View.GONE);
+            if (speechPopup != null && speechPopup.isShowing()) {
+                speechPopup.dismiss();
             }
         }, 4000);
     }
@@ -522,6 +552,9 @@ public class FloatingLobsterService extends Service {
         }
         if (menuPopup != null && menuPopup.isShowing()) {
             menuPopup.dismiss();
+        }
+        if (speechPopup != null && speechPopup.isShowing()) {
+            speechPopup.dismiss();
         }
         unregisterReceiver(feedReceiver);
         unregisterReceiver(alertReceiver);

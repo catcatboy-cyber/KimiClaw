@@ -13,26 +13,6 @@
         android:layout_height="100dp"
         android:layout_gravity="center" />
 
-    <!-- 对话气泡 - 放在龙虾上方 -->
-    <TextView
-        android:id="@+id/speechBubble"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:minWidth="120dp"
-        android:maxWidth="200dp"
-        android:background="@drawable/bubble_bg"
-        android:padding="10dp"
-        android:text="嗨！"
-        android:textColor="@color/black"
-        android:textSize="13sp"
-        android:maxLines="4"
-        android:ellipsize="end"
-        android:visibility="gone"
-        android:layout_gravity="top|center_horizontal"
-        android:layout_marginTop="5dp"
-        android:elevation="10dp"
-        android:gravity="center" />
-
     <!-- 饥饿提示 -->
     <TextView
         android:id="@+id/hungerIndicator"
