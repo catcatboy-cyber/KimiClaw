@@ -13,7 +13,8 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.graphics.PixelFormat;
 import android.graphics.Point;
-import android.graphics.drawable.AnimationDrawable;
+import android.graphics.drawable.AnimatedVectorDrawable;
+import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
@@ -31,6 +32,8 @@ import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.PopupWindow;
 import android.widget.TextView;
+
+import androidx.core.content.ContextCompat;
 
 import java.util.Random;
 
@@ -56,18 +59,17 @@ public class FloatingLobsterService extends Service {
     private static final int LOBSTER_SIZE = 90;
     private static final String CHANNEL_ID = "KimiClawChannel";
 
-    // 动画帧资源
-    private static final int[] ANIM_NORMAL = {R.drawable.lobster_normal_1, R.drawable.lobster_normal_2};
-    private static final int[] ANIM_EATING = {R.drawable.lobster_eating_1, R.drawable.lobster_eating_2};
-    private static final int[] ANIM_HUNGRY = {R.drawable.lobster_hungry_1, R.drawable.lobster_hungry_2};
-    private static final int[] ANIM_SAD = {R.drawable.lobster_sad_1, R.drawable.lobster_sad_2};
+    // Vector Drawable 资源
+    private static final int DRAWABLE_NORMAL = R.drawable.lobster_normal_vector;
+    private static final int DRAWABLE_EATING = R.drawable.lobster_eating_vector;
+    private static final int DRAWABLE_HUNGRY = R.drawable.lobster_hungry_vector;
+    private static final int DRAWABLE_SAD = R.drawable.lobster_sad_vector;
 
-    // 当前动画状态
+    // 当前状态
     private enum LobsterState { NORMAL, EATING, HUNGRY, SAD }
     private LobsterState currentState = LobsterState.NORMAL;
-    private int currentFrame = 0;
 
-    // 小龙虾台词
+    // 台词
     private final String[] SPEECHES_NORMAL = {
         "嗨！", "在呢！", "好无聊啊", "钳钳~", "主人好~"
     };
@@ -90,10 +92,9 @@ public class FloatingLobsterService extends Service {
         startForeground(1, createNotification());
 
         setupFloatingWindow();
-        startFrameAnimation();
+        startStateCheck();
         startCrawlingAnimation();
         startHungerDecrease();
-        startStateCheck();
 
         registerReceiver(feedReceiver, new IntentFilter("com.kimiclaw.pet.FEED"));
         registerReceiver(alertReceiver, new IntentFilter("com.kimiclaw.pet.SHOW_ALERT"));
@@ -131,6 +132,9 @@ public class FloatingLobsterService extends Service {
         speechBubble = floatingView.findViewById(R.id.speechBubble);
         hungerIndicator = floatingView.findViewById(R.id.hungerIndicator);
         floatingContainer = floatingView.findViewById(R.id.floatingContainer);
+
+        // 设置初始 Vector Drawable
+        updateLobsterDrawable();
 
         Point size = new Point();
         windowManager.getDefaultDisplay().getSize(size);
@@ -185,39 +189,30 @@ public class FloatingLobsterService extends Service {
     }
 
     /**
-     * 启动帧动画循环
+     * 更新龙虾 Vector Drawable
      */
-    private void startFrameAnimation() {
-        Runnable frameRunnable = new Runnable() {
-            @Override
-            public void run() {
-                if (floatingView == null || !floatingView.isAttachedToWindow()) return;
-
-                // 根据当前状态切换帧
-                int[] frames = getCurrentFrames();
-                currentFrame = (currentFrame + 1) % frames.length;
-                lobsterImageView.setImageResource(frames[currentFrame]);
-
-                // 每500ms切换一帧
-                handler.postDelayed(this, 500);
-            }
-        };
-        handler.postDelayed(frameRunnable, 500);
-    }
-
-    /**
-     * 获取当前状态的帧数组
-     */
-    private int[] getCurrentFrames() {
+    private void updateLobsterDrawable() {
+        int drawableRes;
         switch (currentState) {
             case EATING:
-                return ANIM_EATING;
+                drawableRes = DRAWABLE_EATING;
+                break;
             case HUNGRY:
-                return ANIM_HUNGRY;
+                drawableRes = DRAWABLE_HUNGRY;
+                break;
             case SAD:
-                return ANIM_SAD;
+                drawableRes = DRAWABLE_SAD;
+                break;
             default:
-                return ANIM_NORMAL;
+                drawableRes = DRAWABLE_NORMAL;
+        }
+
+        Drawable drawable = ContextCompat.getDrawable(this, drawableRes);
+        lobsterImageView.setImageDrawable(drawable);
+
+        // 启动动画（如果是 AnimatedVectorDrawable）
+        if (drawable instanceof AnimatedVectorDrawable) {
+            ((AnimatedVectorDrawable) drawable).start();
         }
     }
 
@@ -235,17 +230,15 @@ public class FloatingLobsterService extends Service {
 
                 LobsterState newState = LobsterState.NORMAL;
 
-                // 优先级：饥饿 > 心情差 > 正常
                 if (hunger < 30) {
                     newState = LobsterState.HUNGRY;
                 } else if (mood < 30) {
                     newState = LobsterState.SAD;
                 }
 
-                // 状态改变时重置帧
                 if (newState != currentState) {
                     currentState = newState;
-                    currentFrame = 0;
+                    updateLobsterDrawable();
                 }
 
                 handler.postDelayed(this, 2000);
@@ -255,7 +248,6 @@ public class FloatingLobsterService extends Service {
     }
 
     private void onLobsterClicked() {
-        // 点击动画
         ScaleAnimation scale = new ScaleAnimation(
                 1f, 1.15f, 1f, 1.15f,
                 Animation.RELATIVE_TO_SELF, 0.5f,
@@ -266,7 +258,6 @@ public class FloatingLobsterService extends Service {
         scale.setRepeatCount(1);
         lobsterImageView.startAnimation(scale);
 
-        // 显示菜单
         showMenuPopup();
     }
 
@@ -330,14 +321,12 @@ public class FloatingLobsterService extends Service {
         hunger = Math.min(100, hunger + 25);
         prefs.edit().putInt("hunger", hunger).apply();
 
-        // 切换到吃东西动画
         currentState = LobsterState.EATING;
-        currentFrame = 0;
+        updateLobsterDrawable();
 
-        // 2秒后恢复
         handler.postDelayed(() -> {
             currentState = LobsterState.NORMAL;
-            currentFrame = 0;
+            updateLobsterDrawable();
         }, 2000);
 
         ScaleAnimation scale = new ScaleAnimation(
@@ -387,25 +376,9 @@ public class FloatingLobsterService extends Service {
         startActivity(intent);
     }
 
-    /**
-     * 显示对话气泡 - 改进版
-     */
     private void showSpeech(String text) {
         speechBubble.setText(text);
         speechBubble.setVisibility(View.VISIBLE);
-
-        // 根据状态选择台词
-        String[] speeches;
-        switch (currentState) {
-            case HUNGRY:
-                speeches = SPEECHES_HUNGRY;
-                break;
-            case SAD:
-                speeches = SPEECHES_SAD;
-                break;
-            default:
-                speeches = SPEECHES_NORMAL;
-        }
 
         handler.postDelayed(() -> {
             if (speechBubble != null) {
@@ -449,7 +422,6 @@ public class FloatingLobsterService extends Service {
 
                 animateMove(targetX, targetY);
 
-                // 随机说话
                 if (random.nextInt(5) == 0) {
                     String[] speeches;
                     switch (currentState) {

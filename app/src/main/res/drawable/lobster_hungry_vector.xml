@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="80dp"
+    android:height="80dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+
+    <!-- 龙虾身体（更苍白） -->
+    <path
+        android:fillColor="#FF8888"
+        android:pathData="M50,55
+            C35,55 25,45 25,35
+            C25,20 35,10 50,10
+            C65,10 75,20 75,35
+            C75,45 65,55 50,55Z" />
+
+    <!-- 身体高光 -->
+    <path
+        android:fillColor="#FFAAAA"
+        android:pathData="M50,15
+            C60,15 68,22 68,32
+            C68,38 65,42 60,42
+            C55,42 52,38 52,32
+            C52,22 45,15 50,15Z" />
+
+    <!-- 左眼（下垂） -->
+    <circle
+        android:fillColor="#FFFFFF"
+        android:cx="38"
+        android:cy="35"
+        android:r="7" />
+    <circle
+        android:fillColor="#000000"
+        android:cx="38"
+        android:cy="37"
+        android:r="4" />
+
+    <!-- 右眼（下垂） -->
+    <circle
+        android:fillColor="#FFFFFF"
+        android:cx="62"
+        android:cy="35"
+        android:r="7" />
+    <circle
+        android:fillColor="#000000"
+        android:cx="62"
+        android:cy="37"
+        android:r="4" />
+
+    <!-- 眼泪 -->
+    <path
+        android:fillColor="#88CCFF"
+        android:pathData="M33,40 L31,48 L35,48 Z" />
+    <path
+        android:fillColor="#88CCFF"
+        android:pathData="M67,40 L65,48 L69,48 Z" />
+
+    <!-- 悲伤嘴巴 -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M45,48 Q50,44 55,48"
+        android:strokeColor="#000000"
+        android:strokeWidth="2"
+        android:strokeLineCap="round" />
+
+    <!-- 肚子咕咕叫文字 -->
+    <text
+        android:fillColor="#666666"
+        android:text="Grrr..."
+        android:textSize="8"
+        android:x="35"
+        android:y="65" />
+
+    <!-- 左钳子（无力下垂） -->
+    <path
+        android:fillColor="#FF8888"
+        android:pathData="M22,38
+            C18,45 15,52 12,55
+            C8,58 5,55 8,50
+            C12,45 18,40 22,35Z" />
+
+    <!-- 右钳子（无力下垂） -->
+    <path
+        android:fillColor="#FF8888"
+        android:pathData="M78,38
+            C82,45 85,52 88,55
+            C92,58 95,55 92,50
+            C88,45 82,40 78,35Z" />
+
+    <!-- 触角（无力） -->
+    <path
+        android:fillColor="#FF8888"
+        android:pathData="M35,12 Q32,8 30,5"
+        android:strokeColor="#FF8888"
+        android:strokeWidth="2"
+        android:strokeLineCap="round" />
+    <path
+        android:fillColor="#FF8888"
+        android:pathData="M65,12 Q68,8 70,5"
+        android:strokeColor="#FF8888"
+        android:strokeWidth="2"
+        android:strokeLineCap="round" />
+
+    <!-- 尾巴（无力） -->
+    <path
+        android:fillColor="#FF8888"
+        android:pathData="M40,55
+            L38,68 L42,72 L50,74 L58,72 L62,68 L60,55Z" />
+
+</vector>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/lobster_normal_vector">
+
+    <!-- 钳子摆动动画 -->
+    <target
+        android:name="leftClaw"
+        android:animation="@animator/claw_wave" />
+
+    <!-- 眼睛眨眼动画 -->
+    <target
+        android:name="leftEye"
+        android:animation="@animator/eye_blink" />
+
+</animated-vector>

@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="80dp"
+        android:height="80dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+
+    <!-- 龙虾身体（暗淡） -->
+    <path
+        android:fillColor="#CC6666"
+        android:pathData="M50,55
+            C35,55 25,45 25,35
+            C25,20 35,10 50,10
+            C65,10 75,20 75,35
+            C75,45 65,55 50,55Z" />
+
+    <!-- 左眼（含泪） -->
+    <circle
+        android:fillColor="#FFFFFF"
+        android:cx="38"
+        android:cy="34"
+        android:r="7" />
+    <circle
+        android:fillColor="#3366AA"
+        android:cx="38"
+        android:cy="36"
+        android:r="4" />
+
+    <!-- 右眼（含泪） -->
+    <circle
+        android:fillColor="#FFFFFF"
+        android:cx="62"
+        android:cy="34"
+        android:r="7" />
+    <circle
+        android:fillColor="#3366AA"
+        android:cx="62"
+        android:cy="36"
+        android:r="4" />
+
+    <!-- 大滴眼泪 -->
+    <path
+        android:fillColor="#88CCFF"
+        android:pathData="M30,40 Q28,50 32,55 Q36,50 34,40 Z" />
+    <path
+        android:fillColor="#88CCFF"
+        android:pathData="M66,40 Q64,50 68,55 Q72,50 70,40 Z" />
+
+    <!-- 眼泪滴落 -->
+    <circle
+        android:fillColor="#88CCFF"
+        android:cx="32"
+        android:cy="62"
+        android:r="3" />
+    <circle
+        android:fillColor="#88CCFF"
+        android:cx="68"
+        android:cy="62"
+        android:r="3" />
+
+    <!-- 悲伤嘴巴 -->
+    <path
+        android:fillColor="#AA3333"
+        android:pathData="M45,48 Q50,44 55,48"
+        android:strokeColor="#AA3333"
+        android:strokeWidth="2"
+        android:strokeLineCap="round" />
+
+    <!-- 左钳子（擦眼泪） -->
+    <path
+        android:fillColor="#CC6666"
+        android:pathData="M25,38
+            C22,42 20,46 22,48
+            C24,50 28,48 30,44
+            C32,40 28,36 25,35Z" />
+
+    <!-- 右钳子（下垂） -->
+    <path
+        android:fillColor="#CC6666"
+        android:pathData="M75,38
+            C78,45 80,52 78,55
+            C76,58 72,55 70,50
+            C68,44 72,38 75,35Z" />
+
+    <!-- 触角（耷拉） -->
+    <path
+        android:fillColor="#CC6666"
+        android:pathData="M35,12 Q33,18 32,22"
+        android:strokeColor="#CC6666"
+        android:strokeWidth="2"
+        android:strokeLineCap="round" />
+    <path
+        android:fillColor="#CC6666"
+        android:pathData="M65,12 Q67,18 68,22"
+        android:strokeColor="#CC6666"
+        android:strokeWidth="2"
+        android:strokeLineCap="round" />
+
+    <!-- 尾巴（蜷缩） -->
+    <path
+        android:fillColor="#CC6666"
+        android:pathData="M42,55
+            L40,65 L45,68 L50,70 L55,68 L60,65 L58,55Z" />
+
+    <!-- 乌云 -->
+    <path
+        android:fillColor="#888888"
+        android:pathData="M15,15 Q20,10 25,15 Q30,12 32,18 Q28,22 22,20 Q18,22 15,18 Z" />
+    <path
+        android:fillColor="#888888"
+        android:pathData="M68,15 Q73,10 78,15 Q83,12 85,18 Q81,22 75,20 Q71,22 68,18 Z" />
+
+</vector>

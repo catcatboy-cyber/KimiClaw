@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="80dp"
+    android:height="80dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+
+    <!-- 龙虾身体 -->
+    <path
+        android:fillColor="#FF4444"
+        android:pathData="M50,55
+            C35,55 25,45 25,35
+            C25,20 35,10 50,10
+            C65,10 75,20 75,35
+            C75,45 65,55 50,55Z" />
+
+    <!-- 身体高光 -->
+    <path
+        android:fillColor="#FF6666"
+        android:pathData="M50,15
+            C60,15 68,22 68,32
+            C68,38 65,42 60,42
+            C55,42 52,38 52,32
+            C52,22 45,15 50,15Z" />
+
+    <!-- 左眼 -->
+    <circle
+        android:fillColor="#FFFFFF"
+        android:cx="38"
+        android:cy="32"
+        android:r="8" />
+    <circle
+        android:fillColor="#000000"
+        android:cx="38"
+        android:cy="32"
+        android:r="5" />
+    <circle
+        android:fillColor="#FFFFFF"
+        android:cx="40"
+        android:cy="30"
+        android:r="2" />
+
+    <!-- 右眼 -->
+    <circle
+        android:fillColor="#FFFFFF"
+        android:cx="62"
+        android:cy="32"
+        android:r="8" />
+    <circle
+        android:fillColor="#000000"
+        android:cx="62"
+        android:cy="32"
+        android:r="5" />
+    <circle
+        android:fillColor="#FFFFFF"
+        android:cx="64"
+        android:cy="30"
+        android:r="2" />
+
+    <!-- 左腮红 -->
+    <circle
+        android:fillColor="#FF8888"
+        android:cx="30"
+        android:cy="40"
+        android:r="4" />
+
+    <!-- 右腮红 -->
+    <circle
+        android:fillColor="#FF8888"
+        android:cx="70"
+        android:cy="40"
+        android:r="4" />
+
+    <!-- 微笑 -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M45,42 Q50,46 55,42"
+        android:strokeColor="#000000"
+        android:strokeWidth="2"
+        android:strokeLineCap="round" />
+
+    <!-- 左钳子 -->
+    <path
+        android:fillColor="#FF4444"
+        android:pathData="M20,35
+            C15,30 10,25 8,20
+            C5,15 8,10 12,12
+            C18,15 22,25 25,32Z" />
+
+    <!-- 右钳子 -->
+    <path
+        android:fillColor="#FF4444"
+        android:pathData="M80,35
+            C85,30 90,25 92,20
+            C95,15 92,10 88,12
+            C82,15 78,25 75,32Z" />
+
+    <!-- 左触角 -->
+    <path
+        android:fillColor="#FF4444"
+        android:pathData="M35,12 Q30,5 28,2"
+        android:strokeColor="#FF4444"
+        android:strokeWidth="3"
+        android:strokeLineCap="round" />
+
+    <!-- 右触角 -->
+    <path
+        android:fillColor="#FF4444"
+        android:pathData="M65,12 Q70,5 72,2"
+        android:strokeColor="#FF4444"
+        android:strokeWidth="3"
+        android:strokeLineCap="round" />
+
+    <!-- 尾巴 -->
+    <path
+        android:fillColor="#FF4444"
+        android:pathData="M40,55
+            L35,70 L40,75 L50,78 L60,75 L65,70 L60,55Z" />
+
+    <!-- 尾巴分段 -->
+    <path
+        android:fillColor="#CC3333"
+        android:pathData="M38,62 L62,62"
+        android:strokeColor="#CC3333"
+        android:strokeWidth="2" />
+    <path
+        android:fillColor="#CC3333"
+        android:pathData="M37,68 L63,68"
+        android:strokeColor="#CC3333"
+        android:strokeWidth="2" />
+
+</vector>

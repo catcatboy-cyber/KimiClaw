@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="80dp"
+    android:height="80dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+
+    <!-- 龙虾身体 -->
+    <path
+        android:fillColor="#FF4444"
+        android:pathData="M50,55
+            C35,55 25,45 25,35
+            C25,20 35,10 50,10
+            C65,10 75,20 75,35
+            C75,45 65,55 50,55Z" />
+
+    <!-- 身体高光 -->
+    <path
+        android:fillColor="#FF6666"
+        android:pathData="M50,15
+            C60,15 68,22 68,32
+            C68,38 65,42 60,42
+            C55,42 52,38 52,32
+            C52,22 45,15 50,15Z" />
+
+    <!-- 左眼（开心眯眼） -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M32,32 Q38,28 44,32"
+        android:strokeColor="#000000"
+        android:strokeWidth="3"
+        android:strokeLineCap="round" />
+
+    <!-- 右眼（开心眯眼） -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M56,32 Q62,28 68,32"
+        android:strokeColor="#000000"
+        android:strokeWidth="3"
+        android:strokeLineCap="round" />
+
+    <!-- 开心腮红 -->
+    <circle
+        android:fillColor="#FF9999"
+        android:cx="28"
+        android:cy="38"
+        android:r="5" />
+    <circle
+        android:fillColor="#FF9999"
+        android:cx="72"
+        android:cy="38"
+        android:r="5" />
+
+    <!-- 大口吃（张嘴） -->
+    <ellipse
+        android:fillColor="#AA0000"
+        android:cx="50"
+        android:cy="45"
+        android:rx="8"
+        android:ry="6" />
+
+    <!-- 食物（虾） -->
+    <path
+        android:fillColor="#FFAA66"
+        android:pathData="M45,50
+            Q42,55 45,60
+            Q50,62 55,60
+            Q58,55 55,50
+            Q50,48 45,50Z" />
+    <path
+        android:fillColor="#FF8800"
+        android:pathData="M48,55 L52,55"
+        android:strokeColor="#FF8800"
+        android:strokeWidth="2" />
+
+    <!-- 左钳子（举着食物） -->
+    <path
+        android:fillColor="#FF4444"
+        android:pathData="M20,35
+            C15,40 12,48 15,52
+            C18,55 22,52 25,48
+            C28,42 25,35 22,32Z" />
+
+    <!-- 右钳子（举着食物） -->
+    <path
+        android:fillColor="#FF4444"
+        android:pathData="M80,35
+            C85,40 88,48 85,52
+            C82,55 78,52 75,48
+            C72,42 75,35 78,32Z" />
+
+    <!-- 触角（开心抖动） -->
+    <path
+        android:fillColor="#FF4444"
+        android:pathData="M35,12 Q28,5 25,0"
+        android:strokeColor="#FF4444"
+        android:strokeWidth="3"
+        android:strokeLineCap="round" />
+    <path
+        android:fillColor="#FF4444"
+        android:pathData="M65,12 Q72,5 75,0"
+        android:strokeColor="#FF4444"
+        android:strokeWidth="3"
+        android:strokeLineCap="round" />
+
+    <!-- 尾巴（开心摇摆） -->
+    <path
+        android:fillColor="#FF4444"
+        android:pathData="M40,55
+            L35,72 L42,76 L50,78 L58,76 L65,72 L60,55Z" />
+
+    <!-- 开心星星 -->
+    <path
+        android:fillColor="#FFFF00"
+        android:pathData="M20,20 L22,25 L27,25 L23,28 L25,33 L20,30 L15,33 L17,28 L13,25 L18,25 Z" />
+    <path
+        android:fillColor="#FFFF00"
+        android:pathData="M80,20 L82,25 L87,25 L83,28 L85,33 L80,30 L75,33 L77,28 L73,25 L78,25 Z" />
+
+</vector>
