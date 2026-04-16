@@ -1,6 +1,5 @@
 package com.kimiclaw.pet;
 
-import android.app.Activity;
 import android.app.DownloadManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -20,8 +19,6 @@ import android.util.Log;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 
 import org.json.JSONArray;
@@ -153,13 +150,19 @@ public class UpdateManager {
     }
 
     /**
-     * 解析版本号
+     * 解析版本号 - 支持 v1.2.3 格式
      */
     private int parseVersionNumber(String tagName) {
         try {
-            String version = tagName.replace("v", "");
-            return Integer.parseInt(version);
+            String version = tagName.replaceAll("[^0-9.]", "");
+            String[] parts = version.split("\\.");
+            int result = 0;
+            for (String part : parts) {
+                result = result * 1000 + Integer.parseInt(part);
+            }
+            return result;
         } catch (Exception e) {
+            Log.e(TAG, "Version parse error for: " + tagName, e);
             return 0;
         }
     }
@@ -170,9 +173,10 @@ public class UpdateManager {
     private int getCurrentVersionCode() {
         try {
             PackageInfo packageInfo = context.getPackageManager().getPackageInfo(context.getPackageName(), 0);
-            return packageInfo.versionCode;
+            String versionName = packageInfo.versionName;
+            return parseVersionNumber(versionName);
         } catch (PackageManager.NameNotFoundException e) {
-            return 1;
+            return 0;
         }
     }
 
@@ -252,7 +256,7 @@ public class UpdateManager {
             request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "KimiClaw_update.apk");
             request.setMimeType("application/vnd.android.package-archive");
             request.setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI | DownloadManager.Request.NETWORK_MOBILE);
-            request.addRequestHeader("User-Agent", "Mozilla/5.0 (Linux; Android 10)");
+            // 不添加自定义User-Agent，让系统默认处理
 
             downloadId = downloadManager.enqueue(request);
 
@@ -331,7 +335,24 @@ public class UpdateManager {
             return;
         }
 
-        // 尝试使用FileProvider安装
+        // 校验文件头，确认是 ZIP/APK 格式
+        try {
+            java.io.FileInputStream fis = new java.io.FileInputStream(apkFile);
+            byte[] header = new byte[4];
+            int read = fis.read(header);
+            fis.close();
+            if (read < 2 || header[0] != 0x50 || header[1] != 0x4B) {
+                Log.e(TAG, "File is not a valid APK! Header: " + 
+                    String.format("%02X %02X", header[0], header[1]));
+                Toast.makeText(context, "下载内容不是有效APK（可能是网页），请用浏览器直接下载", 
+                    Toast.LENGTH_LONG).show();
+                apkFile.delete();
+                return;
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Header check failed", e);
+        }
+
         try {
             Intent intent = new Intent(Intent.ACTION_VIEW);
             intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -350,7 +371,6 @@ public class UpdateManager {
 
             intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
 
-            // 授予所有可能的包安装权限
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             }
@@ -359,12 +379,11 @@ public class UpdateManager {
                 context.startActivity(intent);
             } else {
                 Toast.makeText(context, "无法打开安装界面，请手动安装", Toast.LENGTH_LONG).show();
-                // 提示用户手动安装
                 showManualInstallDialog(apkFile);
             }
         } catch (Exception e) {
             Log.e(TAG, "Install error: " + e.getMessage(), e);
-            Toast.makeText(context, "安装失败: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            Toast.makeText(context, "安装失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             showManualInstallDialog(apkFile);
         }
     }
