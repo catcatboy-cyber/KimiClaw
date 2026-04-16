@@ -286,28 +286,8 @@ public class FloatingLobsterService extends Service {
         menuPopup.setBackgroundDrawable(getResources().getDrawable(R.drawable.menu_bg));
         menuPopup.setElevation(20);
 
-        int[] location = new int[2];
-        floatingView.getLocationOnScreen(location);
-
-        // 菜单紧跟着龙虾上方显示
-        int menuWidth = 240; // 预估菜单宽度
-        int menuHeight = 200; // 预估菜单高度
-
-        // X坐标：让菜单居中在龙虾上方
-        int x = location[0] + LOBSTER_SIZE / 2 - menuWidth / 2;
-        // Y坐标：在龙虾上方
-        int y = location[1] - menuHeight + 20;
-
-        // 如果上方空间不够（太靠近屏幕顶部），则显示在龙虾下方
-        if (y < 50) {
-            y = location[1] + LOBSTER_SIZE - 20;
-        }
-
-        // 确保不超出屏幕左右边界
-        if (x < 10) x = 10;
-        if (x + menuWidth > screenWidth - 10) x = screenWidth - menuWidth - 10;
-
-        menuPopup.showAtLocation(floatingView, Gravity.NO_GRAVITY, x, y);
+        // 使用 showAsDropDown 让菜单跟随龙虾，显示在上方
+        menuPopup.showAsDropDown(floatingView, 0, -400);
     }
 
     private void feedLobster() {
@@ -390,19 +370,8 @@ public class FloatingLobsterService extends Service {
         speechPopup.setBackgroundDrawable(getResources().getDrawable(R.drawable.bubble_bg));
         speechPopup.setElevation(20);
 
-        // 计算位置：在龙虾上方
-        int[] location = new int[2];
-        floatingView.getLocationOnScreen(location);
-        int bubbleWidth = 200;
-        int x = location[0] + LOBSTER_SIZE / 2 - bubbleWidth / 2;
-        int y = location[1] - 100;
-
-        // 确保不超出屏幕
-        if (x < 10) x = 10;
-        if (x + bubbleWidth > screenWidth - 10) x = screenWidth - bubbleWidth - 10;
-        if (y < 50) y = location[1] + LOBSTER_SIZE + 20;
-
-        speechPopup.showAtLocation(floatingView, Gravity.NO_GRAVITY, x, y);
+        // 使用 showAsDropDown 让冒泡跟随龙虾，显示在上方
+        speechPopup.showAsDropDown(floatingView, 0, -150);
 
         // 4秒后自动关闭
         handler.postDelayed(() -> {
