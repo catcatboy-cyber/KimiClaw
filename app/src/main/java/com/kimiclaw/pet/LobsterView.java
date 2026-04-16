@@ -40,8 +40,8 @@ public class LobsterView extends View {
 
     // 身体部件位置
     private float centerX, centerY;
-    private float bodyWidth = 50f;
-    private float bodyHeight = 70f;
+    private float bodyWidth = 45f;
+    private float bodyHeight = 65f;
 
     public LobsterView(Context context) {
         super(context);
@@ -264,26 +264,26 @@ public class LobsterView extends View {
     }
 
     private void drawClaws(Canvas canvas, float offset) {
-        float clawY = centerY - bodyHeight * 0.1f + offset;
+        float clawY = centerY - bodyHeight * 0.05f + offset;
 
-        // 左钳子
+        // 左钳子 - 更靠近身体，不伸出边界
         leftClawPath.reset();
-        float leftClawX = centerX - bodyWidth / 2 - 5;
+        float leftClawX = centerX - bodyWidth / 2 + 2;
         leftClawPath.moveTo(leftClawX, clawY);
-        leftClawPath.quadTo(leftClawX - 20, clawY - 15, leftClawX - 25, clawY - 5);
-        leftClawPath.quadTo(leftClawX - 22, clawY + 5, leftClawX - 15, clawY + 8);
-        leftClawPath.quadTo(leftClawX - 10, clawY + 3, leftClawX, clawY + 5);
+        leftClawPath.quadTo(leftClawX - 12, clawY - 12, leftClawX - 18, clawY - 5);
+        leftClawPath.quadTo(leftClawX - 16, clawY + 3, leftClawX - 10, clawY + 6);
+        leftClawPath.quadTo(leftClawX - 6, clawY + 2, leftClawX, clawY + 3);
         leftClawPath.close();
         canvas.drawPath(leftClawPath, clawPaint);
         canvas.drawPath(leftClawPath, strokePaint);
 
         // 右钳子
         rightClawPath.reset();
-        float rightClawX = centerX + bodyWidth / 2 + 5;
+        float rightClawX = centerX + bodyWidth / 2 - 2;
         rightClawPath.moveTo(rightClawX, clawY);
-        rightClawPath.quadTo(rightClawX + 20, clawY - 15, rightClawX + 25, clawY - 5);
-        rightClawPath.quadTo(rightClawX + 22, clawY + 5, rightClawX + 15, clawY + 8);
-        rightClawPath.quadTo(rightClawX + 10, clawY + 3, rightClawX, clawY + 5);
+        rightClawPath.quadTo(rightClawX + 12, clawY - 12, rightClawX + 18, clawY - 5);
+        rightClawPath.quadTo(rightClawX + 16, clawY + 3, rightClawX + 10, clawY + 6);
+        rightClawPath.quadTo(rightClawX + 6, clawY + 2, rightClawX, clawY + 3);
         rightClawPath.close();
         canvas.drawPath(rightClawPath, clawPaint);
         canvas.drawPath(rightClawPath, strokePaint);
@@ -293,8 +293,8 @@ public class LobsterView extends View {
         highlightPaint.setColor(Color.parseColor("#F5B7B1"));
         highlightPaint.setStyle(Paint.Style.FILL);
 
-        canvas.drawCircle(leftClawX - 18, clawY - 5, 3, highlightPaint);
-        canvas.drawCircle(rightClawX + 18, clawY - 5, 3, highlightPaint);
+        canvas.drawCircle(leftClawX - 12, clawY - 4, 2.5f, highlightPaint);
+        canvas.drawCircle(rightClawX + 12, clawY - 4, 2.5f, highlightPaint);
     }
 
     private void drawClawsEating(Canvas canvas, float offset) {
@@ -447,7 +447,7 @@ public class LobsterView extends View {
     }
 
     private void drawAntennas(Canvas canvas, float offset) {
-        float antennaY = centerY - bodyHeight * 0.35f + offset;
+        float antennaY = centerY - bodyHeight * 0.3f + offset;
 
         Paint antennaPaint = new Paint();
         antennaPaint.setColor(Color.parseColor("#C0392B"));
@@ -455,22 +455,22 @@ public class LobsterView extends View {
         antennaPaint.setStyle(Paint.Style.STROKE);
         antennaPaint.setAntiAlias(true);
 
-        // 左触须
-        float wave = (float) Math.sin(animationProgress * Math.PI * 2) * 5f;
+        // 左触须 - 缩短长度，不伸出边界
+        float wave = (float) Math.sin(animationProgress * Math.PI * 2) * 4f;
         Path leftAntenna = new Path();
-        leftAntenna.moveTo(centerX - 8, antennaY);
-        leftAntenna.quadTo(centerX - 15 + wave, antennaY - 20, centerX - 12 + wave * 1.5f, antennaY - 35);
+        leftAntenna.moveTo(centerX - 6, antennaY);
+        leftAntenna.quadTo(centerX - 10 + wave, antennaY - 15, centerX - 8 + wave, antennaY - 25);
         canvas.drawPath(leftAntenna, antennaPaint);
 
         // 右触须
         Path rightAntenna = new Path();
-        rightAntenna.moveTo(centerX + 8, antennaY);
-        rightAntenna.quadTo(centerX + 15 - wave, antennaY - 20, centerX + 12 - wave * 1.5f, antennaY - 35);
+        rightAntenna.moveTo(centerX + 6, antennaY);
+        rightAntenna.quadTo(centerX + 10 - wave, antennaY - 15, centerX + 8 - wave, antennaY - 25);
         canvas.drawPath(rightAntenna, antennaPaint);
 
         // 触须末端小球
-        canvas.drawCircle(centerX - 12 + wave * 1.5f, antennaY - 35, 2, bodyPaint);
-        canvas.drawCircle(centerX + 12 - wave * 1.5f, antennaY - 35, 2, bodyPaint);
+        canvas.drawCircle(centerX - 8 + wave, antennaY - 25, 2, bodyPaint);
+        canvas.drawCircle(centerX + 8 - wave, antennaY - 25, 2, bodyPaint);
     }
 
     private void drawAntennasSad(Canvas canvas, float offset) {

@@ -51,7 +51,7 @@ public class FloatingLobsterService extends Service {
     private Random random;
     private SharedPreferences prefs;
 
-    private static final int LOBSTER_SIZE = 90;
+    private static final int LOBSTER_SIZE = 140;
     private static final String CHANNEL_ID = "KimiClawChannel";
 
     // 当前状态
@@ -289,12 +289,24 @@ public class FloatingLobsterService extends Service {
 
         int[] location = new int[2];
         floatingView.getLocationOnScreen(location);
-        int x = location[0] + LOBSTER_SIZE / 2 - 60;
-        int y = location[1] - 280;
 
-        if (y < 100) {
-            y = location[1] + LOBSTER_SIZE + 20;
+        // 菜单紧跟着龙虾上方显示
+        int menuWidth = 240; // 预估菜单宽度
+        int menuHeight = 200; // 预估菜单高度
+
+        // X坐标：让菜单居中在龙虾上方
+        int x = location[0] + LOBSTER_SIZE / 2 - menuWidth / 2;
+        // Y坐标：在龙虾上方
+        int y = location[1] - menuHeight + 20;
+
+        // 如果上方空间不够（太靠近屏幕顶部），则显示在龙虾下方
+        if (y < 50) {
+            y = location[1] + LOBSTER_SIZE - 20;
         }
+
+        // 确保不超出屏幕左右边界
+        if (x < 10) x = 10;
+        if (x + menuWidth > screenWidth - 10) x = screenWidth - menuWidth - 10;
 
         menuPopup.showAtLocation(floatingView, Gravity.NO_GRAVITY, x, y);
     }
