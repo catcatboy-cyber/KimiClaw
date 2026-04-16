@@ -47,6 +47,14 @@ jobs:
     - name: Build Release APK
       run: gradle assembleRelease
 
+    - name: Get version from build.gradle
+      id: get_version
+      run: |
+        VERSION=$(grep -oP 'versionName "\K[^"]+' app/build.gradle)
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Detected version: $VERSION"
+
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
@@ -59,10 +67,10 @@ jobs:
       uses: softprops/action-gh-release@v2
       with:
         files: app/build/outputs/apk/release/*.apk
-        tag_name: v${{ github.run_number }}
-        name: KimiClaw v${{ github.run_number }}
+        tag_name: v${{ steps.get_version.outputs.version }}
+        name: KimiClaw v${{ steps.get_version.outputs.version }}
         body: |
-          🦞 KimiClaw 小龙虾桌面宠物自动构建版本
+          🦞 KimiClaw 小龙虾桌面宠物自动构建版本 v${{ steps.get_version.outputs.version }}
 
           ## 安装说明
           1. 下载 APK 文件

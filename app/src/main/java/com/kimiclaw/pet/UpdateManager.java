@@ -115,7 +115,9 @@ public class UpdateManager {
             int latestVersion = parseVersionNumber(tagName);
             int currentVersion = getCurrentVersionCode();
 
-            Log.d(TAG, "Current version: " + currentVersion + ", Latest version: " + latestVersion);
+            Log.d(TAG, "Current version: " + currentVersion + " (from app)");
+            Log.d(TAG, "Latest version: " + latestVersion + " (from GitHub tag: " + tagName + ")");
+            Log.d(TAG, "Need update: " + (latestVersion > currentVersion));
 
             JSONArray assets = release.getJSONArray("assets");
             String downloadUrl = null;
