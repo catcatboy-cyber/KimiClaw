@@ -85,9 +85,10 @@ public class UpdateManager {
 
                     parseReleaseInfo(response.toString(), showNoUpdateToast);
                 } else {
+                    String errorMsg = getErrorMessage(responseCode);
                     mainHandler.post(() -> {
                         if (showNoUpdateToast) {
-                            Toast.makeText(context, "检查更新失败，请稍后重试", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(context, "检查更新失败 (" + responseCode + "): " + errorMsg, Toast.LENGTH_LONG).show();
                         }
                     });
                 }
@@ -100,6 +101,47 @@ public class UpdateManager {
                 });
             }
         });
+    }
+
+    /**
+     * 获取错误码对应的消息
+     */
+    private String getErrorMessage(int code) {
+        switch (code) {
+            case 301:
+            case 302:
+            case 307:
+            case 308:
+                return "重定向错误";
+            case 400:
+                return "请求参数错误";
+            case 401:
+                return "未授权访问";
+            case 403:
+                return "访问被拒绝(API限流)";
+            case 404:
+                return "资源不存在";
+            case 408:
+                return "请求超时";
+            case 429:
+                return "请求过于频繁";
+            case 500:
+                return "服务器内部错误";
+            case 502:
+                return "网关错误";
+            case 503:
+                return "服务不可用";
+            case 504:
+                return "网关超时";
+            default:
+                if (code >= 500) {
+                    return "服务器错误";
+                } else if (code >= 400) {
+                    return "客户端错误";
+                } else {
+                    return "未知错误";
+                }
+        }
     }
 
     /**
