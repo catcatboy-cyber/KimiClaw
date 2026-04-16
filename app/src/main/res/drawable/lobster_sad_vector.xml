@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="80dp"
-        android:height="80dp"
+    android:height="80dp"
     android:viewportWidth="100"
     android:viewportHeight="100">
 
@@ -15,28 +15,20 @@
             C75,45 65,55 50,55Z" />
 
     <!-- 左眼（含泪） -->
-    <circle
+    <path
         android:fillColor="#FFFFFF"
-        android:cx="38"
-        android:cy="34"
-        android:r="7" />
-    <circle
+        android:pathData="M38,34 m-7,0 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0" />
+    <path
         android:fillColor="#3366AA"
-        android:cx="38"
-        android:cy="36"
-        android:r="4" />
+        android:pathData="M38,36 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0" />
 
     <!-- 右眼（含泪） -->
-    <circle
+    <path
         android:fillColor="#FFFFFF"
-        android:cx="62"
-        android:cy="34"
-        android:r="7" />
-    <circle
+        android:pathData="M62,34 m-7,0 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0" />
+    <path
         android:fillColor="#3366AA"
-        android:cx="62"
-        android:cy="36"
-        android:r="4" />
+        android:pathData="M62,36 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0" />
 
     <!-- 大滴眼泪 -->
     <path
@@ -47,16 +39,12 @@
         android:pathData="M66,40 Q64,50 68,55 Q72,50 70,40 Z" />
 
     <!-- 眼泪滴落 -->
-    <circle
+    <path
         android:fillColor="#88CCFF"
-        android:cx="32"
-        android:cy="62"
-        android:r="3" />
-    <circle
+        android:pathData="M32,62 m-3,0 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0" />
+    <path
         android:fillColor="#88CCFF"
-        android:cx="68"
-        android:cy="62"
-        android:r="3" />
+        android:pathData="M68,62 m-3,0 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0" />
 
     <!-- 悲伤嘴巴 -->
     <path

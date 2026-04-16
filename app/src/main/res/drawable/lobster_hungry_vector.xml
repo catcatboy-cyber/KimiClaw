@@ -24,28 +24,20 @@
             C52,22 45,15 50,15Z" />
 
     <!-- 左眼（下垂） -->
-    <circle
+    <path
         android:fillColor="#FFFFFF"
-        android:cx="38"
-        android:cy="35"
-        android:r="7" />
-    <circle
+        android:pathData="M38,35 m-7,0 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0" />
+    <path
         android:fillColor="#000000"
-        android:cx="38"
-        android:cy="37"
-        android:r="4" />
+        android:pathData="M38,37 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0" />
 
     <!-- 右眼（下垂） -->
-    <circle
+    <path
         android:fillColor="#FFFFFF"
-        android:cx="62"
-        android:cy="35"
-        android:r="7" />
-    <circle
+        android:pathData="M62,35 m-7,0 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0" />
+    <path
         android:fillColor="#000000"
-        android:cx="62"
-        android:cy="37"
-        android:r="4" />
+        android:pathData="M62,37 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0" />
 
     <!-- 眼泪 -->
     <path
@@ -62,14 +54,6 @@
         android:strokeColor="#000000"
         android:strokeWidth="2"
         android:strokeLineCap="round" />
-
-    <!-- 肚子咕咕叫文字 -->
-    <text
-        android:fillColor="#666666"
-        android:text="Grrr..."
-        android:textSize="8"
-        android:x="35"
-        android:y="65" />
 
     <!-- 左钳子（无力下垂） -->
     <path

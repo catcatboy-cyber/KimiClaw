@@ -40,24 +40,21 @@
         android:strokeLineCap="round" />
 
     <!-- 开心腮红 -->
-    <circle
+    <path
         android:fillColor="#FF9999"
-        android:cx="28"
-        android:cy="38"
-        android:r="5" />
-    <circle
+        android:pathData="M28,38 m-5,0 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0" />
+    <path
         android:fillColor="#FF9999"
-        android:cx="72"
-        android:cy="38"
-        android:r="5" />
+        android:pathData="M72,38 m-5,0 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0" />
 
     <!-- 大口吃（张嘴） -->
-    <ellipse
+    <path
         android:fillColor="#AA0000"
-        android:cx="50"
-        android:cy="45"
-        android:rx="8"
-        android:ry="6" />
+        android:pathData="M42,45
+            C42,41 46,39 50,39
+            C54,39 58,41 58,45
+            C58,49 54,51 50,51
+            C46,51 42,49 42,45Z" />
 
     <!-- 食物（虾） -->
     <path
