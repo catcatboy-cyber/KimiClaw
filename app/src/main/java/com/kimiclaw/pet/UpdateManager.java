@@ -381,6 +381,14 @@ public class UpdateManager {
         Log.d(TAG, "Installing from URI: " + apkUri.toString());
 
         try {
+            // Android 7.0+ 禁止通过 file:// URI 跨应用共享文件
+            // DownloadManager 返回的可能是 file:// 格式，需要转成 content://
+            if ("file".equals(apkUri.getScheme())) {
+                File apkFile = new File(apkUri.getPath());
+                String authority = context.getPackageName() + ".fileprovider";
+                apkUri = FileProvider.getUriForFile(context, authority, apkFile);
+            }
+
             Intent intent = new Intent(Intent.ACTION_VIEW);
             intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
