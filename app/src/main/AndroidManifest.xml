@@ -2,6 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.kimiclaw.pet">
 
+    <!-- 声明查询微信包，修复Android 11+跳转失败 -->
+    <queries>
+        <package android:name="com.tencent.mm" />
+    </queries>
+
     <!-- 悬浮窗权限 -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
