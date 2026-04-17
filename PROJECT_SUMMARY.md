@@ -47,13 +47,13 @@
 - 对话历史显示
 
 ### 5. 消息监控系统 📱
-**文件**: `MessageMonitorService.java`, `MessageAlertReceiver.java`
+**文件**: `MessageMonitorService.java`
 
 - 继承 `NotificationListenerService`
 - 监控系统通知栏消息
 - 支持微信、QQ、微博、钉钉等主流社交App
 - 可配置监控指定联系人
-- 通过广播通知悬浮窗显示提醒
+- 匹配成功后直接发送广播通知悬浮窗显示提醒
 
 ## 技术架构
 
@@ -67,7 +67,7 @@
 │                      服务层 (Service)                    │
 │  ┌──────────────────┐  ┌──────────────────────────┐    │
 │  │FloatingLobster   │  │  MessageMonitorService   │    │
-│  │Service (悬浮窗)   │  │  (通知监听)               │    │
+│  │Service (悬浮窗)   │  │  (通知监听+消息转发)      │    │
 │  └──────────────────┘  └──────────────────────────┘    │
 ├─────────────────────────────────────────────────────────┤
 │                      数据层 (Data)                       │
@@ -98,8 +98,7 @@ KimiClawPet/
 │   │   ├── java/com/kimiclaw/pet/
 │   │   │   ├── MainActivity.java              # 主界面
 │   │   │   ├── FloatingLobsterService.java    # 悬浮窗服务
-│   │   │   ├── MessageMonitorService.java     # 消息监控服务
-│   │   │   └── MessageAlertReceiver.java      # 消息广播接收器
+│   │   │   └── MessageMonitorService.java     # 消息监控服务
 │   │   ├── res/
 │   │   │   ├── layout/
 │   │   │   │   ├── activity_main.xml          # 主界面布局

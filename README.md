@@ -103,8 +103,7 @@ KimiClawPet/
 │   ├── src/main/java/com/kimiclaw/pet/
 │   │   ├── MainActivity.java          # 主界面
 │   │   ├── FloatingLobsterService.java # 悬浮窗服务
-│   │   ├── MessageMonitorService.java  # 消息监控服务
-│   │   └── MessageAlertReceiver.java   # 消息提醒接收器
+│   │   └── MessageMonitorService.java  # 消息监控服务
 │   ├── src/main/res/
 │   │   ├── layout/                    # 布局文件
 │   │   ├── drawable/                  # 图形资源

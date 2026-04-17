@@ -84,6 +84,14 @@ public class MessageMonitorService extends NotificationListenerService {
             if (!title.isEmpty() && !title.equals("微信")) {
                 return title;
             }
+            // 某些ROM或隐藏详情模式下，title为"微信"，尝试从text解析
+            // 常见格式："发送者: 消息内容" 或 "发送者：消息内容"
+            if (!text.isEmpty()) {
+                String sender = parseWeChatSender(text);
+                if (sender != null) {
+                    return sender;
+                }
+            }
         } else if (packageName.equals(QQ_PACKAGE)) {
             // QQ：title通常是发送者
             if (!title.isEmpty() && !title.equals("QQ")) {
@@ -99,6 +107,28 @@ public class MessageMonitorService extends NotificationListenerService {
         return null;
     }
 
+    private String parseWeChatSender(String text) {
+        if (text == null || text.isEmpty()) {
+            return null;
+        }
+        // 尝试匹配 "发送者: 内容" 或 "发送者：内容"
+        int colonIndex = text.indexOf(':');
+        if (colonIndex == -1) {
+            colonIndex = text.indexOf('：');
+        }
+        if (colonIndex > 0) {
+            String sender = text.substring(0, colonIndex).trim();
+            if (!sender.isEmpty() && sender.length() < 30) {
+                return sender;
+            }
+        }
+        // 如果text本身很短（可能是人名或简短提示），也尝试返回
+        if (text.length() < 15 && !text.contains("收到") && !text.contains("条新消息")) {
+            return text.trim();
+        }
+        return null;
+    }
+
     private boolean isMonitoredContact(String sender, Set<String> monitoredContacts) {
         for (String contact : monitoredContacts) {
             if (sender.contains(contact) || contact.contains(sender)) {
@@ -109,8 +139,8 @@ public class MessageMonitorService extends NotificationListenerService {
     }
 
     private void notifyFloatingLobster(String sender, String content) {
-        // 发送广播通知悬浮窗服务
-        android.content.Intent intent = new android.content.Intent("com.kimiclaw.pet.MESSAGE_ALERT");
+        // 直接发送广播给悬浮窗服务显示提醒
+        android.content.Intent intent = new android.content.Intent("com.kimiclaw.pet.SHOW_ALERT");
         intent.putExtra("sender", sender);
         intent.putExtra("content", content);
         sendBroadcast(intent);
