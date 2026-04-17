@@ -5,7 +5,7 @@
     android:orientation="vertical"
     android:padding="16dp">
 
-    <!-- 顶部：App图标 + 消息计数 -->
+    <!-- 顶部标题栏：App图标 + 消息数量 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -19,134 +19,36 @@
             android:src="@android:drawable/ic_dialog_email" />
 
         <TextView
-            android:id="@+id/tvMessageCount"
+            android:id="@+id/tvTitle"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:layout_marginStart="8dp"
-            android:text="📱 1 条新消息"
+            android:text="📱 新消息"
             android:textColor="#FFFFFF"
             android:textSize="14sp"
             android:textStyle="bold" />
 
     </LinearLayout>
 
-    <!-- 轮播区域 -->
-    <LinearLayout
+    <!-- 消息列表 -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvMessages"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:layout_marginTop="12dp">
+        android:layout_marginTop="12dp"
+        android:overScrollMode="never" />
 
-        <!-- 左箭头 -->
-        <TextView
-            android:id="@+id/btnPrev"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:gravity="center"
-            android:text="◀"
-            android:textColor="#FFFFFF"
-            android:textSize="14sp"
-            android:visibility="gone" />
-
-        <!-- 消息内容 -->
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:layout_marginHorizontal="8dp">
-
-            <TextView
-                android:id="@+id/tvSender"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="👤 联系人"
-                android:textColor="#FFFFFF"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:maxLines="1"
-                android:ellipsize="end" />
-
-            <TextView
-                android:id="@+id/tvContent"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:text="消息内容..."
-                android:textColor="#E0E0E0"
-                android:textSize="14sp"
-                android:maxLines="3"
-                android:ellipsize="end" />
-
-            <TextView
-                android:id="@+id/tvPageIndicator"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="1 / 1"
-                android:textColor="#B0B0B0"
-                android:textSize="12sp" />
-
-        </LinearLayout>
-
-        <!-- 右箭头 -->
-        <TextView
-            android:id="@+id/btnNext"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:gravity="center"
-            android:text="▶"
-            android:textColor="#FFFFFF"
-            android:textSize="14sp"
-            android:visibility="gone" />
-
-    </LinearLayout>
-
-    <!-- 按钮区域 -->
-    <LinearLayout
+    <!-- 底部按钮：忽略全部 -->
+    <TextView
+        android:id="@+id/btnDismissAll"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginTop="16dp">
-
-        <TextView
-            android:id="@+id/btnDismiss"
-            android:layout_width="0dp"
-            android:layout_height="36dp"
-            android:layout_weight="1"
-            android:layout_marginEnd="4dp"
-            android:text="忽略"
-            android:textColor="#B0B0B0"
-            android:textSize="12sp"
-            android:gravity="center"
-            android:background="@drawable/btn_outline_small" />
-
-        <TextView
-            android:id="@+id/btnDismissAll"
-            android:layout_width="0dp"
-            android:layout_height="36dp"
-            android:layout_weight="1"
-            android:layout_marginHorizontal="4dp"
-            android:text="忽略全部"
-            android:textColor="#B0B0B0"
-            android:textSize="12sp"
-            android:gravity="center"
-            android:background="@drawable/btn_outline_small" />
-
-        <TextView
-            android:id="@+id/btnOpen"
-            android:layout_width="0dp"
-            android:layout_height="36dp"
-            android:layout_weight="1"
-            android:layout_marginStart="4dp"
-            android:text="打开"
-            android:textColor="#FFFFFF"
-            android:textSize="12sp"
-            android:gravity="center"
-            android:background="@drawable/btn_primary_small" />
-
-    </LinearLayout>
+        android:layout_height="36dp"
+        android:layout_marginTop="12dp"
+        android:text="忽略全部"
+        android:textColor="#B0B0B0"
+        android:textSize="12sp"
+        android:gravity="center"
+        android:background="@drawable/btn_outline_small" />
 
 </LinearLayout>

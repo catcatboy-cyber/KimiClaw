@@ -32,7 +32,12 @@ import android.widget.PopupWindow;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
+
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 public class FloatingLobsterService extends Service {
 
@@ -62,9 +67,12 @@ public class FloatingLobsterService extends Service {
     private static final String CHANNEL_ID = "KimiClawChannel";
     private static final String TAG = "FloatingLobster";
 
-    // 临时保存最后一条消息的来源信息（用于单条弹窗打开）
-    private String lastPackageName = "com.tencent.mm";
-    private PendingIntent lastContentIntent = null;
+    // 消息队列：支持多App、多联系人、多条消息
+    private final List<MessageItem> messageQueue = new ArrayList<>();
+    private MessagePopupAdapter messageAdapter;
+    private TextView tvTitle;
+    private RecyclerView rvMessages;
+    private static final int MAX_MESSAGE_QUEUE_SIZE = 20;
 
     // 当前状态
     private enum LobsterState { NORMAL, EATING, HUNGRY, SAD }
@@ -372,61 +380,58 @@ public class FloatingLobsterService extends Service {
     }
 
     private void showMessagePopup(String sender, String content, String packageName, PendingIntent contentIntent) {
-        this.lastPackageName = packageName != null ? packageName : "com.tencent.mm";
-        this.lastContentIntent = contentIntent;
+        // 添加到消息队列（去重：同一联系人+同一App更新并置顶）
+        MessageItem newItem = new MessageItem(sender, content, packageName, contentIntent, System.currentTimeMillis());
+        addOrUpdateMessage(newItem);
 
-        // 关闭之前的弹窗
+        // 如果弹窗已显示，刷新列表即可
         if (messagePopup != null && messagePopup.isShowing()) {
-            messagePopup.dismiss();
+            refreshMessagePopup();
+            return;
         }
 
         // 创建消息弹窗视图
         View popupView = LayoutInflater.from(this).inflate(R.layout.message_popup, null);
 
-        TextView tvSender = popupView.findViewById(R.id.tvSender);
-        TextView tvContent = popupView.findViewById(R.id.tvContent);
-        TextView btnOpen = popupView.findViewById(R.id.btnOpen);
-        View btnDismiss = popupView.findViewById(R.id.btnDismiss);
+        tvTitle = popupView.findViewById(R.id.tvTitle);
+        rvMessages = popupView.findViewById(R.id.rvMessages);
+        TextView btnDismissAll = popupView.findViewById(R.id.btnDismissAll);
 
-        tvSender.setText("👤 " + sender);
-        // 截断过长的消息
-        String preview = content.length() > 50 ? content.substring(0, 50) + "..." : content;
-        tvContent.setText(preview);
+        // 设置RecyclerView
+        rvMessages.setLayoutManager(new LinearLayoutManager(this));
+        messageAdapter = new MessagePopupAdapter(messageQueue, new MessagePopupAdapter.OnMessageActionListener() {
+            @Override
+            public void onItemClick(MessageItem item, int position) {
+                openAppWithContentIntent(item.packageName, item.contentIntent);
+                dismissMessage(position);
+            }
 
-        // 根据来源设置按钮文字
-        if ("com.tencent.mm".equals(lastPackageName)) {
-            btnOpen.setText("打开微信");
-        } else if ("com.tencent.mobileqq".equals(lastPackageName)) {
-            btnOpen.setText("打开 QQ");
-        } else {
-            btnOpen.setText("打开");
-        }
+            @Override
+            public void onDismissClick(MessageItem item, int position) {
+                dismissMessage(position);
+            }
+        });
+        rvMessages.setAdapter(messageAdapter);
+
+        refreshMessagePopup();
+
+        // 忽略全部
+        btnDismissAll.setOnClickListener(v -> dismissAllMessages());
 
         messagePopup = new PopupWindow(
-            popupView,
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            false
+                popupView,
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                false
         );
         messagePopup.setBackgroundDrawable(getResources().getDrawable(R.drawable.message_popup_bg));
         messagePopup.setElevation(20);
         messagePopup.setOutsideTouchable(true);
 
-        // 点击打开：优先使用 contentIntent 直达联系人
-        btnOpen.setOnClickListener(v -> {
-            openAppWithContentIntent(lastPackageName, lastContentIntent);
-            messagePopup.dismiss();
-        });
-
-        // 点击关闭
-        btnDismiss.setOnClickListener(v -> {
-            messagePopup.dismiss();
-        });
-
         // 计算位置：在龙虾旁边
         int[] location = new int[2];
         floatingView.getLocationOnScreen(location);
-        int popupWidth = 280;
+        int popupWidth = 320;
         int x = location[0] + LOBSTER_SIZE + 20;
         int y = location[1];
 
@@ -437,12 +442,87 @@ public class FloatingLobsterService extends Service {
 
         messagePopup.showAtLocation(floatingView, Gravity.NO_GRAVITY, x, y);
 
-        // 10秒后自动关闭
+        // 15秒后自动关闭
         handler.postDelayed(() -> {
             if (messagePopup != null && messagePopup.isShowing()) {
                 messagePopup.dismiss();
             }
-        }, 10000);
+        }, 15000);
+    }
+
+    /**
+     * 添加或更新消息到队列。同一联系人+同一App的消息会去重并置顶。
+     */
+    private void addOrUpdateMessage(MessageItem newItem) {
+        String newKey = newItem.getKey();
+        for (int i = 0; i < messageQueue.size(); i++) {
+            MessageItem existing = messageQueue.get(i);
+            if (existing.getKey().equals(newKey)) {
+                // 更新内容、时间和contentIntent，并移到队首
+                existing.content = newItem.content;
+                existing.timestamp = newItem.timestamp;
+                existing.contentIntent = newItem.contentIntent;
+                messageQueue.remove(i);
+                messageQueue.add(0, existing);
+                return;
+            }
+        }
+        // 新消息，添加到队首
+        messageQueue.add(0, newItem);
+        // 限制队列大小
+        if (messageQueue.size() > MAX_MESSAGE_QUEUE_SIZE) {
+            messageQueue.remove(messageQueue.size() - 1);
+        }
+    }
+
+    /**
+     * 刷新弹窗UI
+     */
+    private void refreshMessagePopup() {
+        if (tvTitle != null) {
+            tvTitle.setText("📱 " + messageQueue.size() + " 条新消息");
+        }
+        if (messageAdapter != null) {
+            messageAdapter.notifyDataSetChanged();
+        }
+        // 动态调整RecyclerView高度，最多显示约5条
+        if (rvMessages != null && messageQueue.size() > 0) {
+            int maxHeight = (int) (280 * getResources().getDisplayMetrics().density);
+            int itemHeight = (int) (90 * getResources().getDisplayMetrics().density);
+            int desiredHeight = Math.min(messageQueue.size() * itemHeight, maxHeight);
+            rvMessages.getLayoutParams().height = desiredHeight;
+            rvMessages.requestLayout();
+        }
+        // 刷新PopupWindow尺寸，使其随内容自适应
+        if (messagePopup != null && messagePopup.isShowing()) {
+            messagePopup.update();
+        }
+    }
+
+    /**
+     * 忽略单条消息
+     */
+    private void dismissMessage(int position) {
+        if (position >= 0 && position < messageQueue.size()) {
+            messageQueue.remove(position);
+            if (messageQueue.isEmpty()) {
+                if (messagePopup != null && messagePopup.isShowing()) {
+                    messagePopup.dismiss();
+                }
+            } else {
+                refreshMessagePopup();
+            }
+        }
+    }
+
+    /**
+     * 忽略全部消息
+     */
+    private void dismissAllMessages() {
+        messageQueue.clear();
+        if (messagePopup != null && messagePopup.isShowing()) {
+            messagePopup.dismiss();
+        }
     }
 
     private void openAppWithContentIntent(String packageName, PendingIntent contentIntent) {
