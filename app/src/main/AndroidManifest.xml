@@ -2,9 +2,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.kimiclaw.pet">
 
-    <!-- 声明查询微信包，修复Android 11+跳转失败 -->
+    <!-- 声明查询微信和QQ包，修复Android 11+跳转失败 -->
     <queries>
         <package android:name="com.tencent.mm" />
+        <package android:name="com.tencent.mobileqq" />
     </queries>
 
     <!-- 悬浮窗权限 -->
