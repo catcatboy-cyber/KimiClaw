@@ -119,6 +119,72 @@
         android:layout_marginTop="8dp"
         android:layout_marginBottom="16dp" />
 
+    <!-- 消息弹窗持续时间 -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="消息弹窗持续时间"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:textColor="@color/black"
+        android:layout_marginBottom="8dp" />
+
+    <RadioGroup
+        android:id="@+id/rgPopupDuration"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginBottom="8dp">
+
+        <RadioButton
+            android:id="@+id/rbDurationForever"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="永久显示（手动关闭）"
+            android:textSize="14sp" />
+
+        <RadioButton
+            android:id="@+id/rbDuration10s"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="10 秒"
+            android:textSize="14sp" />
+
+        <RadioButton
+            android:id="@+id/rbDurationCustom"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="自定义"
+            android:textSize="14sp" />
+    </RadioGroup>
+
+    <EditText
+        android:id="@+id/etCustomDuration"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:hint="输入秒数（例如 30）"
+        android:padding="12dp"
+        android:background="@drawable/input_bg"
+        android:textSize="14sp"
+        android:inputType="number"
+        android:visibility="gone"
+        android:layout_marginBottom="8dp" />
+
+    <Button
+        android:id="@+id/btnSaveDuration"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:text="💾 保存持续时间"
+        android:backgroundTint="@color/lobster_red"
+        android:layout_marginBottom="16dp" />
+
+    <!-- 分割线 -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#EEEEEE"
+        android:layout_marginBottom="16dp" />
+
     <!-- 权限设置 -->
     <TextView
         android:layout_width="wrap_content"

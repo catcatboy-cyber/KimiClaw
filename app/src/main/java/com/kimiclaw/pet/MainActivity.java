@@ -20,6 +20,8 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.ProgressBar;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -380,6 +382,13 @@ public class MainActivity extends AppCompatActivity {
         Button btnPermissionOverlay = view.findViewById(R.id.btnPermissionOverlay);
         Button btnPermissionNotification = view.findViewById(R.id.btnPermissionNotification);
 
+        RadioGroup rgPopupDuration = view.findViewById(R.id.rgPopupDuration);
+        RadioButton rbDurationForever = view.findViewById(R.id.rbDurationForever);
+        RadioButton rbDuration10s = view.findViewById(R.id.rbDuration10s);
+        RadioButton rbDurationCustom = view.findViewById(R.id.rbDurationCustom);
+        EditText etCustomDuration = view.findViewById(R.id.etCustomDuration);
+        Button btnSaveDuration = view.findViewById(R.id.btnSaveDuration);
+
         // 加载已保存的API Key
         String savedKey = prefs.getString("glm_api_key", "");
         if (!savedKey.isEmpty()) {
@@ -387,6 +396,28 @@ public class MainActivity extends AppCompatActivity {
                     savedKey.substring(Math.max(0, savedKey.length() - 4));
             apiKeyInput.setHint("已设置: " + maskedKey);
         }
+
+        // 加载已保存的弹窗持续时间
+        int popupDuration = prefs.getInt("messagePopupDuration", 10);
+        if (popupDuration == -1) {
+            rbDurationForever.setChecked(true);
+            etCustomDuration.setVisibility(View.GONE);
+        } else if (popupDuration == 10) {
+            rbDuration10s.setChecked(true);
+            etCustomDuration.setVisibility(View.GONE);
+        } else {
+            rbDurationCustom.setChecked(true);
+            etCustomDuration.setVisibility(View.VISIBLE);
+            etCustomDuration.setText(String.valueOf(popupDuration));
+        }
+
+        rgPopupDuration.setOnCheckedChangeListener((group, checkedId) -> {
+            if (checkedId == R.id.rbDurationCustom) {
+                etCustomDuration.setVisibility(View.VISIBLE);
+            } else {
+                etCustomDuration.setVisibility(View.GONE);
+            }
+        });
 
         // 更新配置备份状态
         if (configManager.hasBackupConfig()) {
@@ -398,6 +429,36 @@ public class MainActivity extends AppCompatActivity {
         }
 
         AlertDialog dialog = builder.create();
+
+        // 保存弹窗持续时间
+        btnSaveDuration.setOnClickListener(v -> {
+            int duration;
+            int checkedId = rgPopupDuration.getCheckedRadioButtonId();
+            if (checkedId == R.id.rbDurationForever) {
+                duration = -1;
+            } else if (checkedId == R.id.rbDuration10s) {
+                duration = 10;
+            } else {
+                String customStr = etCustomDuration.getText().toString().trim();
+                if (customStr.isEmpty()) {
+                    Toast.makeText(this, "请输入自定义秒数", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                try {
+                    duration = Integer.parseInt(customStr);
+                    if (duration < 1) {
+                        Toast.makeText(this, "秒数必须大于 0", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                } catch (NumberFormatException e) {
+                    Toast.makeText(this, "请输入有效的数字", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+            }
+            editor.putInt("messagePopupDuration", duration);
+            editor.apply();
+            Toast.makeText(this, "弹窗持续时间已保存", Toast.LENGTH_SHORT).show();
+        });
 
         // API Key 按钮
         btnSaveKey.setOnClickListener(v -> {

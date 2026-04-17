@@ -73,6 +73,7 @@ public class FloatingLobsterService extends Service {
     private TextView tvTitle;
     private RecyclerView rvMessages;
     private static final int MAX_MESSAGE_QUEUE_SIZE = 20;
+    private Runnable messagePopupDismissRunnable;
 
     // 当前状态
     private enum LobsterState { NORMAL, EATING, HUNGRY, SAD }
@@ -389,9 +390,10 @@ public class FloatingLobsterService extends Service {
         MessageItem newItem = new MessageItem(safeSender, safeContent, safePackage, contentIntent, System.currentTimeMillis());
         addOrUpdateMessage(newItem);
 
-        // 如果弹窗已显示，刷新列表即可
+        // 如果弹窗已显示，刷新列表并重新计时自动关闭
         if (messagePopup != null && messagePopup.isShowing()) {
             refreshMessagePopup();
+            scheduleMessagePopupDismiss();
             return;
         }
 
@@ -447,12 +449,30 @@ public class FloatingLobsterService extends Service {
 
         messagePopup.showAtLocation(floatingView, Gravity.NO_GRAVITY, x, y);
 
-        // 15秒后自动关闭
-        handler.postDelayed(() -> {
+        scheduleMessagePopupDismiss();
+    }
+
+    /**
+     * 根据设置调度消息弹窗的自动关闭任务
+     */
+    private void scheduleMessagePopupDismiss() {
+        // 取消之前的自动关闭任务
+        if (messagePopupDismissRunnable != null) {
+            handler.removeCallbacks(messagePopupDismissRunnable);
+        }
+
+        int durationSeconds = prefs.getInt("messagePopupDuration", 10);
+        if (durationSeconds <= 0) {
+            // -1 或 0 表示永久显示（手动关闭），不启动自动关闭
+            return;
+        }
+
+        messagePopupDismissRunnable = () -> {
             if (messagePopup != null && messagePopup.isShowing()) {
                 messagePopup.dismiss();
             }
-        }, 15000);
+        };
+        handler.postDelayed(messagePopupDismissRunnable, durationSeconds * 1000L);
     }
 
     /**
@@ -505,8 +525,12 @@ public class FloatingLobsterService extends Service {
                 if (messagePopup != null && messagePopup.isShowing()) {
                     messagePopup.dismiss();
                 }
+                if (messagePopupDismissRunnable != null) {
+                    handler.removeCallbacks(messagePopupDismissRunnable);
+                }
             } else {
                 refreshMessagePopup();
+                scheduleMessagePopupDismiss();
             }
         }
     }
@@ -518,6 +542,9 @@ public class FloatingLobsterService extends Service {
         messageQueue.clear();
         if (messagePopup != null && messagePopup.isShowing()) {
             messagePopup.dismiss();
+        }
+        if (messagePopupDismissRunnable != null) {
+            handler.removeCallbacks(messagePopupDismissRunnable);
         }
     }
 
@@ -767,6 +794,9 @@ public class FloatingLobsterService extends Service {
         }
         if (messagePopup != null && messagePopup.isShowing()) {
             messagePopup.dismiss();
+        }
+        if (messagePopupDismissRunnable != null) {
+            handler.removeCallbacks(messagePopupDismissRunnable);
         }
         unregisterReceiver(feedReceiver);
         unregisterReceiver(alertReceiver);
