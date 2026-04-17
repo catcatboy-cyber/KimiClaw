@@ -1,6 +1,7 @@
 package com.kimiclaw.pet;
 
 import android.app.Notification;
+import android.app.PendingIntent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.service.notification.NotificationListenerService;
@@ -59,7 +60,7 @@ public class MessageMonitorService extends NotificationListenerService {
         String sender = extractSender(title, text, packageName);
         if (sender != null && isMonitoredContact(sender, monitoredContacts)) {
             // 匹配成功，通知悬浮窗
-            notifyFloatingLobster(sender, text);
+            notifyFloatingLobster(sender, text, packageName, notification.contentIntent);
         }
     }
 
@@ -138,11 +139,15 @@ public class MessageMonitorService extends NotificationListenerService {
         return false;
     }
 
-    private void notifyFloatingLobster(String sender, String content) {
+    private void notifyFloatingLobster(String sender, String content, String packageName, PendingIntent contentIntent) {
         // 直接发送广播给悬浮窗服务显示提醒
         android.content.Intent intent = new android.content.Intent("com.kimiclaw.pet.SHOW_ALERT");
         intent.putExtra("sender", sender);
         intent.putExtra("content", content);
+        intent.putExtra("packageName", packageName);
+        if (contentIntent != null) {
+            intent.putExtra("contentIntent", contentIntent);
+        }
         sendBroadcast(intent);
 
         Log.d(TAG, "监控到消息：" + sender + " - " + content);
