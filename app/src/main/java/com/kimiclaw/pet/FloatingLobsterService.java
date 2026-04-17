@@ -59,6 +59,11 @@ public class FloatingLobsterService extends Service {
 
     private static final int LOBSTER_SIZE = 140;
     private static final String CHANNEL_ID = "KimiClawChannel";
+    private static final String TAG = "FloatingLobster";
+
+    // 临时保存最后一条消息的来源信息（用于单条弹窗打开）
+    private String lastPackageName = "com.tencent.mm";
+    private PendingIntent lastContentIntent = null;
 
     // 当前状态
     private enum LobsterState { NORMAL, EATING, HUNGRY, SAD }
@@ -365,7 +370,10 @@ public class FloatingLobsterService extends Service {
         startActivity(intent);
     }
 
-    private void showMessagePopup(String sender, String content) {
+    private void showMessagePopup(String sender, String content, String packageName, PendingIntent contentIntent) {
+        this.lastPackageName = packageName != null ? packageName : "com.tencent.mm";
+        this.lastContentIntent = contentIntent;
+
         // 关闭之前的弹窗
         if (messagePopup != null && messagePopup.isShowing()) {
             messagePopup.dismiss();
@@ -376,13 +384,22 @@ public class FloatingLobsterService extends Service {
 
         TextView tvSender = popupView.findViewById(R.id.tvSender);
         TextView tvContent = popupView.findViewById(R.id.tvContent);
-        View btnOpen = popupView.findViewById(R.id.btnOpen);
+        TextView btnOpen = popupView.findViewById(R.id.btnOpen);
         View btnDismiss = popupView.findViewById(R.id.btnDismiss);
 
         tvSender.setText("👤 " + sender);
         // 截断过长的消息
         String preview = content.length() > 50 ? content.substring(0, 50) + "..." : content;
         tvContent.setText(preview);
+
+        // 根据来源设置按钮文字
+        if ("com.tencent.mm".equals(lastPackageName)) {
+            btnOpen.setText("打开微信");
+        } else if ("com.tencent.mobileqq".equals(lastPackageName)) {
+            btnOpen.setText("打开 QQ");
+        } else {
+            btnOpen.setText("打开");
+        }
 
         messagePopup = new PopupWindow(
             popupView,
@@ -394,9 +411,9 @@ public class FloatingLobsterService extends Service {
         messagePopup.setElevation(20);
         messagePopup.setOutsideTouchable(true);
 
-        // 点击打开微信
+        // 点击打开：优先使用 contentIntent 直达联系人
         btnOpen.setOnClickListener(v -> {
-            openWeChat();
+            openAppWithContentIntent(lastPackageName, lastContentIntent);
             messagePopup.dismiss();
         });
 
@@ -427,6 +444,33 @@ public class FloatingLobsterService extends Service {
         }, 10000);
     }
 
+    private void openAppWithContentIntent(String packageName, PendingIntent contentIntent) {
+        if (contentIntent != null) {
+            try {
+                contentIntent.send();
+                return;
+            } catch (Exception e) {
+                Log.e(TAG, "contentIntent send failed", e);
+            }
+        }
+
+        if ("com.tencent.mm".equals(packageName)) {
+            openWeChat();
+        } else if ("com.tencent.mobileqq".equals(packageName)) {
+            openQQ();
+        } else {
+            try {
+                Intent intent = getPackageManager().getLaunchIntentForPackage(packageName);
+                if (intent != null) {
+                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(intent);
+                }
+            } catch (Exception e) {
+                Toast.makeText(this, "打开应用失败", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
     private void openWeChat() {
         try {
             Intent intent = getPackageManager().getLaunchIntentForPackage("com.tencent.mm");
@@ -438,6 +482,20 @@ public class FloatingLobsterService extends Service {
             }
         } catch (Exception e) {
             Toast.makeText(this, "打开微信失败", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void openQQ() {
+        try {
+            Intent intent = getPackageManager().getLaunchIntentForPackage("com.tencent.mobileqq");
+            if (intent != null) {
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intent);
+            } else {
+                Toast.makeText(this, "未找到 QQ", Toast.LENGTH_SHORT).show();
+            }
+        } catch (Exception e) {
+            Toast.makeText(this, "打开 QQ 失败", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -590,11 +648,13 @@ public class FloatingLobsterService extends Service {
         public void onReceive(Context context, Intent intent) {
             String sender = intent.getStringExtra("sender");
             String content = intent.getStringExtra("content");
+            String packageName = intent.getStringExtra("packageName");
+            PendingIntent contentIntent = intent.getParcelableExtra("contentIntent");
             String message = intent.getStringExtra("message");
 
             if (sender != null && content != null) {
                 // 显示消息弹窗
-                showMessagePopup(sender, content);
+                showMessagePopup(sender, content, packageName, contentIntent);
                 // 同时让龙虾说话
                 showSpeech("📱 " + sender + " 发来消息！");
             } else if (message != null) {
