@@ -3,7 +3,8 @@
     android:layout_width="320dp"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:padding="16dp"
+    android:background="@drawable/message_popup_bg">
 
     <!-- 顶部标题栏：App图标 + 消息数量 -->
     <LinearLayout

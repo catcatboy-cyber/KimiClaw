@@ -48,7 +48,8 @@ public class FloatingLobsterService extends Service {
     private TextView hungerIndicator;
     private FrameLayout floatingContainer;
     private PopupWindow menuPopup;
-    private PopupWindow messagePopup;
+    private View messagePopupView;
+    private WindowManager.LayoutParams messagePopupParams;
 
     private int petSize;
     private int bubbleHeight;
@@ -64,6 +65,7 @@ public class FloatingLobsterService extends Service {
     private SharedPreferences prefs;
 
     private static final int LOBSTER_SIZE = 140;
+    private static final int MESSAGE_POPUP_WIDTH_DP = 320;
     private static final String CHANNEL_ID = "KimiClawChannel";
     private static final String TAG = "FloatingLobster";
 
@@ -391,18 +393,21 @@ public class FloatingLobsterService extends Service {
         addOrUpdateMessage(newItem);
 
         // 如果弹窗已显示，刷新列表并重新计时自动关闭
-        if (messagePopup != null && messagePopup.isShowing()) {
+        if (messagePopupView != null && messagePopupView.getParent() != null) {
             refreshMessagePopup();
             scheduleMessagePopupDismiss();
             return;
         }
 
-        // 创建消息弹窗视图
-        View popupView = LayoutInflater.from(this).inflate(R.layout.message_popup, null);
+        // 移除旧弹窗（如果有）
+        dismissMessagePopupInternal();
 
-        tvTitle = popupView.findViewById(R.id.tvTitle);
-        rvMessages = popupView.findViewById(R.id.rvMessages);
-        TextView btnDismissAll = popupView.findViewById(R.id.btnDismissAll);
+        // 创建消息弹窗视图
+        messagePopupView = LayoutInflater.from(this).inflate(R.layout.message_popup, null);
+
+        tvTitle = messagePopupView.findViewById(R.id.tvTitle);
+        rvMessages = messagePopupView.findViewById(R.id.rvMessages);
+        TextView btnDismissAll = messagePopupView.findViewById(R.id.btnDismissAll);
 
         // 设置RecyclerView
         rvMessages.setLayoutManager(new LinearLayoutManager(this));
@@ -425,18 +430,22 @@ public class FloatingLobsterService extends Service {
         // 忽略全部
         btnDismissAll.setOnClickListener(v -> dismissAllMessages());
 
-        messagePopup = new PopupWindow(
-                popupView,
-                WindowManager.LayoutParams.WRAP_CONTENT,
-                WindowManager.LayoutParams.WRAP_CONTENT,
-                false
-        );
-        messagePopup.setBackgroundDrawable(androidx.core.content.ContextCompat.getDrawable(this, R.drawable.message_popup_bg));
-        messagePopup.setElevation(20);
-        messagePopup.setOutsideTouchable(true);
+        // 使用独立的 WindowManager 窗口，彻底和小龙虾解耦
+        int type = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+                ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+                : WindowManager.LayoutParams.TYPE_PHONE;
 
-        // 计算位置：固定右上角（状态栏下方，右侧留边距）
-        int popupWidthPx = (int) (320 * getResources().getDisplayMetrics().density);
+        messagePopupParams = new WindowManager.LayoutParams(
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                type,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                        | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+                PixelFormat.TRANSLUCENT
+        );
+        messagePopupParams.gravity = Gravity.TOP | Gravity.START;
+
+        int popupWidthPx = (int) (MESSAGE_POPUP_WIDTH_DP * getResources().getDisplayMetrics().density);
         int marginPx = (int) (12 * getResources().getDisplayMetrics().density);
 
         int statusBarHeight = 0;
@@ -445,12 +454,34 @@ public class FloatingLobsterService extends Service {
             statusBarHeight = getResources().getDimensionPixelSize(resourceId);
         }
 
-        int x = screenWidth - popupWidthPx - marginPx;
-        int y = statusBarHeight + marginPx;
+        messagePopupParams.x = screenWidth - popupWidthPx - marginPx;
+        messagePopupParams.y = statusBarHeight + marginPx;
 
-        messagePopup.showAtLocation(floatingView, Gravity.NO_GRAVITY, x, y);
+        try {
+            windowManager.addView(messagePopupView, messagePopupParams);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to add message popup window", e);
+            messagePopupView = null;
+            return;
+        }
 
         scheduleMessagePopupDismiss();
+    }
+
+    /**
+     * 安全移除消息弹窗视图
+     */
+    private void dismissMessagePopupInternal() {
+        if (messagePopupView != null) {
+            try {
+                if (messagePopupView.getParent() != null) {
+                    windowManager.removeView(messagePopupView);
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "remove message popup error", e);
+            }
+            messagePopupView = null;
+        }
     }
 
     /**
@@ -469,9 +500,7 @@ public class FloatingLobsterService extends Service {
         }
 
         messagePopupDismissRunnable = () -> {
-            if (messagePopup != null && messagePopup.isShowing()) {
-                messagePopup.dismiss();
-            }
+            dismissMessagePopupInternal();
         };
         handler.postDelayed(messagePopupDismissRunnable, durationSeconds * 1000L);
     }
@@ -523,9 +552,7 @@ public class FloatingLobsterService extends Service {
         if (position >= 0 && position < messageQueue.size()) {
             messageQueue.remove(position);
             if (messageQueue.isEmpty()) {
-                if (messagePopup != null && messagePopup.isShowing()) {
-                    messagePopup.dismiss();
-                }
+                dismissMessagePopupInternal();
                 if (messagePopupDismissRunnable != null) {
                     handler.removeCallbacks(messagePopupDismissRunnable);
                 }
@@ -541,9 +568,7 @@ public class FloatingLobsterService extends Service {
      */
     private void dismissAllMessages() {
         messageQueue.clear();
-        if (messagePopup != null && messagePopup.isShowing()) {
-            messagePopup.dismiss();
-        }
+        dismissMessagePopupInternal();
         if (messagePopupDismissRunnable != null) {
             handler.removeCallbacks(messagePopupDismissRunnable);
         }
@@ -793,9 +818,7 @@ public class FloatingLobsterService extends Service {
         if (menuPopup != null && menuPopup.isShowing()) {
             menuPopup.dismiss();
         }
-        if (messagePopup != null && messagePopup.isShowing()) {
-            messagePopup.dismiss();
-        }
+        dismissMessagePopupInternal();
         if (messagePopupDismissRunnable != null) {
             handler.removeCallbacks(messagePopupDismissRunnable);
         }
