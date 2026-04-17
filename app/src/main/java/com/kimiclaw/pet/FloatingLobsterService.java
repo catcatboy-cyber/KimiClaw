@@ -435,17 +435,18 @@ public class FloatingLobsterService extends Service {
         messagePopup.setElevation(20);
         messagePopup.setOutsideTouchable(true);
 
-        // 计算位置：在龙虾旁边
-        int[] location = new int[2];
-        floatingView.getLocationOnScreen(location);
-        int popupWidth = 320;
-        int x = location[0] + LOBSTER_SIZE + 20;
-        int y = location[1];
+        // 计算位置：固定右上角（状态栏下方，右侧留边距）
+        int popupWidthPx = (int) (320 * getResources().getDisplayMetrics().density);
+        int marginPx = (int) (12 * getResources().getDisplayMetrics().density);
 
-        // 确保不超出屏幕右边界
-        if (x + popupWidth > screenWidth - 20) {
-            x = location[0] - popupWidth - 20;
+        int statusBarHeight = 0;
+        int resourceId = getResources().getIdentifier("status_bar_height", "dimen", "android");
+        if (resourceId > 0) {
+            statusBarHeight = getResources().getDimensionPixelSize(resourceId);
         }
+
+        int x = screenWidth - popupWidthPx - marginPx;
+        int y = statusBarHeight + marginPx;
 
         messagePopup.showAtLocation(floatingView, Gravity.NO_GRAVITY, x, y);
 
