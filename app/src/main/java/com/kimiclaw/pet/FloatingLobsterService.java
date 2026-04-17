@@ -380,8 +380,13 @@ public class FloatingLobsterService extends Service {
     }
 
     private void showMessagePopup(String sender, String content, String packageName, PendingIntent contentIntent) {
+        // 防空指针
+        String safeSender = sender != null ? sender : "未知";
+        String safeContent = content != null ? content : "";
+        String safePackage = packageName != null ? packageName : "";
+
         // 添加到消息队列（去重：同一联系人+同一App更新并置顶）
-        MessageItem newItem = new MessageItem(sender, content, packageName, contentIntent, System.currentTimeMillis());
+        MessageItem newItem = new MessageItem(safeSender, safeContent, safePackage, contentIntent, System.currentTimeMillis());
         addOrUpdateMessage(newItem);
 
         // 如果弹窗已显示，刷新列表即可
@@ -424,7 +429,7 @@ public class FloatingLobsterService extends Service {
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 false
         );
-        messagePopup.setBackgroundDrawable(getResources().getDrawable(R.drawable.message_popup_bg));
+        messagePopup.setBackgroundDrawable(androidx.core.content.ContextCompat.getDrawable(this, R.drawable.message_popup_bg));
         messagePopup.setElevation(20);
         messagePopup.setOutsideTouchable(true);
 
@@ -485,18 +490,9 @@ public class FloatingLobsterService extends Service {
         if (messageAdapter != null) {
             messageAdapter.notifyDataSetChanged();
         }
-        // 动态调整RecyclerView高度，最多显示约5条
-        if (rvMessages != null && messageQueue.size() > 0) {
-            int maxHeight = (int) (280 * getResources().getDisplayMetrics().density);
-            int itemHeight = (int) (90 * getResources().getDisplayMetrics().density);
-            int desiredHeight = Math.min(messageQueue.size() * itemHeight, maxHeight);
-            rvMessages.getLayoutParams().height = desiredHeight;
-            rvMessages.requestLayout();
-        }
-        // 刷新PopupWindow尺寸，使其随内容自适应
-        if (messagePopup != null && messagePopup.isShowing()) {
-            messagePopup.update();
-        }
+        // 注意：RecyclerView 已放在固定高度 280dp 的 FrameLayout 中，
+        // 不需要再动态调整高度。PopupWindow 也无需 update()，
+        // 否则在 WRAP_CONTENT 模式下可能导致窗口测量崩溃。
     }
 
     /**

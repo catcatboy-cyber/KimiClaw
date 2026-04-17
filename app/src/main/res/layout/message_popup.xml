@@ -31,13 +31,19 @@
 
     </LinearLayout>
 
-    <!-- 消息列表 -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvMessages"
+    <!-- 消息列表容器：固定最大高度，防止无限扩展导致崩溃 -->
+    <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:overScrollMode="never" />
+        android:layout_height="280dp"
+        android:layout_marginTop="12dp">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvMessages"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:overScrollMode="never" />
+
+    </FrameLayout>
 
     <!-- 底部按钮：忽略全部 -->
     <TextView
