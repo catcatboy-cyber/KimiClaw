@@ -406,10 +406,57 @@ public class FloatingLobsterService extends Service {
         MessageItem newItem = new MessageItem(safeSender, safeContent, safePackage, contentIntent, System.currentTimeMillis());
         addOrUpdateMessage(newItem);
 
-        // 如果弹窗已显示，刷新列表并重新计时自动关闭
+        // 检测锁屏和屏幕状态
+        android.app.KeyguardManager keyguardManager = (android.app.KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
+        android.os.PowerManager powerManager = (android.os.PowerManager) getSystemService(Context.POWER_SERVICE);
+        boolean isLocked = keyguardManager != null && keyguardManager.isKeyguardLocked();
+        boolean isScreenOn = powerManager != null && powerManager.isInteractive();
+        Log.d(TAG, "showMessagePopup: sender=" + safeSender + ", isLocked=" + isLocked + ", isScreenOn=" + isScreenOn + ", popupExists=" + (messagePopupView != null && messagePopupView.getParent() != null));
+
+        // 锁屏时点亮屏幕（每次消息都尝试）
+        boolean wakeScreen = prefs.getBoolean("wakeScreenOnMessage", true);
+        if (isLocked && wakeScreen && powerManager != null) {
+            try {
+                android.os.PowerManager.WakeLock wakeLock = powerManager.newWakeLock(
+                        android.os.PowerManager.FULL_WAKE_LOCK
+                                | android.os.PowerManager.ACQUIRE_CAUSES_WAKEUP
+                                | android.os.PowerManager.ON_AFTER_RELEASE,
+                        "KimiClaw:MessageWakeLock"
+                );
+                wakeLock.acquire(5000);
+                Log.d(TAG, "WakeLock acquired for message from " + safeSender);
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to acquire WakeLock", e);
+            }
+        }
+
+        // 如果弹窗已显示，需要重新设置 window flags 以确保锁屏时能点亮屏幕
         if (messagePopupView != null && messagePopupView.getParent() != null) {
+            Log.d(TAG, "Popup already exists, updating flags and content");
+
+            // 重新设置 window flags（关键修复：确保第二个消息也能点亮屏幕）
+            if (isLocked && messagePopupParams != null) {
+                int windowFlags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                        | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+                        | WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED
+                        | WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+                        | WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON;
+                messagePopupParams.flags = windowFlags;
+                try {
+                    windowManager.updateViewLayout(messagePopupView, messagePopupParams);
+                    Log.d(TAG, "Window flags updated: SHOW_WHEN_LOCKED + TURN_SCREEN_ON + KEEP_SCREEN_ON");
+                } catch (Exception e) {
+                    Log.e(TAG, "Failed to update window flags", e);
+                }
+            }
+
             refreshMessagePopup();
             scheduleMessagePopupDismiss();
+
+            // 锁屏时发送系统通知兜底
+            if (isLocked) {
+                sendLockScreenNotification(safeSender, safeContent, safePackage);
+            }
             return;
         }
 
@@ -423,30 +470,7 @@ public class FloatingLobsterService extends Service {
         rvMessages = messagePopupView.findViewById(R.id.rvMessages);
         TextView btnDismissAll = messagePopupView.findViewById(R.id.btnDismissAll);
 
-        // 检测锁屏和屏幕状态
-        android.app.KeyguardManager keyguardManager = (android.app.KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
-        android.os.PowerManager powerManager = (android.os.PowerManager) getSystemService(Context.POWER_SERVICE);
-        boolean isLocked = keyguardManager != null && keyguardManager.isKeyguardLocked();
-        boolean isScreenOn = powerManager != null && powerManager.isInteractive();
-        Log.d(TAG, "showMessagePopup: isLocked=" + isLocked + ", isScreenOn=" + isScreenOn);
-
-        // 锁屏时点亮屏幕
-        boolean wakeScreen = prefs.getBoolean("wakeScreenOnMessage", true);
-        if (isLocked && wakeScreen && powerManager != null) {
-            try {
-                // 去掉 !isScreenOn 限制：即使屏幕已亮，也保持亮屏状态确保弹窗可见
-                android.os.PowerManager.WakeLock wakeLock = powerManager.newWakeLock(
-                        android.os.PowerManager.FULL_WAKE_LOCK
-                                | android.os.PowerManager.ACQUIRE_CAUSES_WAKEUP
-                                | android.os.PowerManager.ON_AFTER_RELEASE,
-                        "KimiClaw:MessageWakeLock"
-                );
-                wakeLock.acquire(5000);
-                Log.d(TAG, "WakeLock acquired for 5000ms, isScreenOn=" + isScreenOn);
-            } catch (Exception e) {
-                Log.e(TAG, "Failed to acquire WakeLock", e);
-            }
-        }
+        Log.d(TAG, "Creating new message popup window");
 
         // 锁屏时是否显示消息内容
         boolean showContentOnLockScreen = prefs.getBoolean("showContentOnLockScreen", true);

@@ -287,10 +287,13 @@ public class UpdateManager {
      */
     private void downloadWithDownloadManager(String downloadUrl) {
         try {
+            Log.d(TAG, "Starting download with DownloadManager: " + downloadUrl);
+
             File oldFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
                     "KimiClaw_update.apk");
             if (oldFile.exists()) {
-                oldFile.delete();
+                boolean deleted = oldFile.delete();
+                Log.d(TAG, "Old APK file deleted: " + deleted);
             }
 
             DownloadManager.Request request = new DownloadManager.Request(Uri.parse(downloadUrl));
@@ -303,6 +306,7 @@ public class UpdateManager {
             // 不添加自定义User-Agent，让系统默认处理
 
             downloadId = downloadManager.enqueue(request);
+            Log.d(TAG, "Download enqueued with ID: " + downloadId);
 
             Toast.makeText(context, "开始下载更新，请在通知栏查看进度", Toast.LENGTH_LONG).show();
 
@@ -321,16 +325,22 @@ public class UpdateManager {
         if (downloadReceiver != null) {
             try {
                 context.unregisterReceiver(downloadReceiver);
+                Log.d(TAG, "Unregistered old download receiver");
             } catch (Exception e) {
-                // 忽略
+                Log.d(TAG, "No old receiver to unregister");
             }
         }
 
         downloadReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
+                Log.d(TAG, "BroadcastReceiver.onReceive called, action: " + intent.getAction());
+
                 long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
+                Log.d(TAG, "Received download ID: " + id + ", expected: " + downloadId);
+
                 if (id == downloadId) {
+                    Log.d(TAG, "Download ID matched, querying download status");
                     DownloadManager.Query query = new DownloadManager.Query();
                     query.setFilterById(downloadId);
                     Cursor cursor = downloadManager.query(query);
@@ -338,6 +348,7 @@ public class UpdateManager {
                     if (cursor != null && cursor.moveToFirst()) {
                         int statusIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS);
                         int status = cursor.getInt(statusIndex);
+                        Log.d(TAG, "Download status: " + status + " (8=SUCCESS, 16=FAILED)");
 
                         if (status == DownloadManager.STATUS_SUCCESSFUL) {
                             // 获取实际下载的文件路径
@@ -346,14 +357,17 @@ public class UpdateManager {
                             Log.d(TAG, "Downloaded file URI: " + localUri);
 
                             mainHandler.post(() -> {
+                                Log.d(TAG, "Posting install task to main thread");
                                 if (localUri != null) {
                                     // 使用 DownloadManager 返回的 URI
                                     Uri apkUri = Uri.parse(localUri);
+                                    Log.d(TAG, "Calling installApkFromUri with: " + apkUri);
                                     installApkFromUri(apkUri);
                                 } else {
                                     // 备用：使用硬编码路径
                                     File apkFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
                                             "KimiClaw_update.apk");
+                                    Log.d(TAG, "Calling installApkFile with: " + apkFile.getAbsolutePath());
                                     installApkFile(apkFile);
                                 }
                             });
@@ -362,16 +376,23 @@ public class UpdateManager {
                             int reason = cursor.getInt(reasonIndex);
                             Log.e(TAG, "Download failed, reason: " + reason);
                             mainHandler.post(() -> Toast.makeText(context, "下载失败，请重试", Toast.LENGTH_SHORT).show());
+                        } else {
+                            Log.d(TAG, "Download status is neither SUCCESS nor FAILED: " + status);
                         }
 
                         cursor.close();
+                    } else {
+                        Log.e(TAG, "Cursor is null or empty");
                     }
+                } else {
+                    Log.d(TAG, "Download ID mismatch, ignoring");
                 }
             }
         };
 
         context.registerReceiver(downloadReceiver,
                 new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
+        Log.d(TAG, "Download receiver registered for downloadId: " + downloadId);
     }
 
     /**
@@ -379,7 +400,7 @@ public class UpdateManager {
      * 增加文件头校验 + content URI 转私有缓存 FileProvider URI，解决安装器无权限问题
      */
     private void installApkFromUri(Uri apkUri) {
-        Log.d(TAG, "Installing from URI: " + apkUri.toString());
+        Log.d(TAG, "installApkFromUri called with URI: " + apkUri.toString());
 
         try {
             // 1. 读取文件头校验（支持 content:// 和 file://）
@@ -387,12 +408,14 @@ public class UpdateManager {
             int read = 0;
 
             if ("content".equals(apkUri.getScheme())) {
+                Log.d(TAG, "Reading from content URI");
                 java.io.InputStream is = context.getContentResolver().openInputStream(apkUri);
                 if (is != null) {
                     read = is.read(header);
                     is.close();
                 }
             } else if ("file".equals(apkUri.getScheme())) {
+                Log.d(TAG, "Reading from file URI");
                 String path = apkUri.getPath();
                 if (path != null && path.startsWith("/raw:")) {
                     path = path.substring(5);
@@ -420,6 +443,7 @@ public class UpdateManager {
             }
 
             // 2. 统一拷贝到应用私有缓存目录，再用 FileProvider 生成带权限的 URI
+            Log.d(TAG, "Copying APK to cache directory");
             File cacheApk = new File(context.getCacheDir(), "KimiClaw_update.apk");
             copyUriToFile(apkUri, cacheApk);
 
@@ -427,17 +451,22 @@ public class UpdateManager {
             // 检查是否有安装未知来源应用的权限（Android 8.0+）
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
                     && !context.getPackageManager().canRequestPackageInstalls()) {
+                Log.w(TAG, "Missing install permission for Android 8.0+");
                 showInstallPermissionDialog();
                 return;
             }
 
             Uri installUri = FileProvider.getUriForFile(context, authority, cacheApk);
+            Log.d(TAG, "Generated FileProvider URI: " + installUri);
 
             Intent intent = new Intent(Intent.ACTION_VIEW);
             intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             intent.setDataAndType(installUri, "application/vnd.android.package-archive");
+
+            Log.d(TAG, "Starting install activity");
             context.startActivity(intent);
+            Log.d(TAG, "Install activity started successfully");
         } catch (Exception e) {
             String errorMsg = e.getMessage();
             Log.e(TAG, "Install error: " + errorMsg, e);
