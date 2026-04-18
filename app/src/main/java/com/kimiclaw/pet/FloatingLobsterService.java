@@ -77,6 +77,7 @@ public class FloatingLobsterService extends Service {
     private RecyclerView rvMessages;
     private static final int MAX_MESSAGE_QUEUE_SIZE = 20;
     private Runnable messagePopupDismissRunnable;
+    private int lastNotificationId = -1;
 
     // 当前状态
     private enum LobsterState { NORMAL, EATING, HUNGRY, SAD }
@@ -431,16 +432,17 @@ public class FloatingLobsterService extends Service {
 
         // 锁屏时点亮屏幕
         boolean wakeScreen = prefs.getBoolean("wakeScreenOnMessage", true);
-        if (isLocked && wakeScreen && powerManager != null && !isScreenOn) {
+        if (isLocked && wakeScreen && powerManager != null) {
             try {
+                // 去掉 !isScreenOn 限制：即使屏幕已亮，也保持亮屏状态确保弹窗可见
                 android.os.PowerManager.WakeLock wakeLock = powerManager.newWakeLock(
                         android.os.PowerManager.FULL_WAKE_LOCK
                                 | android.os.PowerManager.ACQUIRE_CAUSES_WAKEUP
                                 | android.os.PowerManager.ON_AFTER_RELEASE,
                         "KimiClaw:MessageWakeLock"
                 );
-                wakeLock.acquire(3000);
-                Log.d(TAG, "WakeLock acquired for 3000ms");
+                wakeLock.acquire(5000);
+                Log.d(TAG, "WakeLock acquired for 5000ms, isScreenOn=" + isScreenOn);
             } catch (Exception e) {
                 Log.e(TAG, "Failed to acquire WakeLock", e);
             }
@@ -911,6 +913,11 @@ public class FloatingLobsterService extends Service {
             }
 
             NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            // 取消上一条通知，让系统重新触发声音/亮屏提醒
+            if (lastNotificationId != -1) {
+                notificationManager.cancel(lastNotificationId);
+            }
+            lastNotificationId = notifyId;
             notificationManager.notify(notifyId, builder.build());
             Log.d(TAG, "Lock screen notification sent: id=" + notifyId + ", sender=" + sender + ", showContent=" + showContentOnLockScreen + ", alertEveryTime=" + alertEveryTime);
         } catch (Exception e) {
