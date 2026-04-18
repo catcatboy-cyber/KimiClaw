@@ -384,6 +384,7 @@ public class MainActivity extends AppCompatActivity {
         Button btnPermissionNotification = view.findViewById(R.id.btnPermissionNotification);
 
         Button btnIgnoreBattery = view.findViewById(R.id.btnIgnoreBattery);
+        Button btnAutoStart = view.findViewById(R.id.btnAutoStart);
         Button btnAppSettings = view.findViewById(R.id.btnAppSettings);
         Button btnInstallPermission = view.findViewById(R.id.btnInstallPermission);
         CheckBox cbWakeScreen = view.findViewById(R.id.cbWakeScreen);
@@ -548,6 +549,55 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(this, "已忽略电池优化", Toast.LENGTH_SHORT).show();
             } else {
                 Intent intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                intent.setData(Uri.parse("package:" + getPackageName()));
+                startActivity(intent);
+            }
+        });
+
+        btnAutoStart.setOnClickListener(v -> {
+            try {
+                // 尝试打开各厂商的自启动管理页面
+                Intent intent = new Intent();
+                String manufacturer = Build.MANUFACTURER.toLowerCase();
+
+                if (manufacturer.contains("xiaomi")) {
+                    // 小米
+                    intent.setComponent(new ComponentName("com.miui.securitycenter",
+                            "com.miui.permcenter.autostart.AutoStartManagementActivity"));
+                } else if (manufacturer.contains("huawei") || manufacturer.contains("honor")) {
+                    // 华为/荣耀
+                    intent.setComponent(new ComponentName("com.huawei.systemmanager",
+                            "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity"));
+                } else if (manufacturer.contains("oppo")) {
+                    // OPPO
+                    intent.setComponent(new ComponentName("com.coloros.safecenter",
+                            "com.coloros.safecenter.permission.startup.StartupAppListActivity"));
+                } else if (manufacturer.contains("vivo")) {
+                    // vivo
+                    intent.setComponent(new ComponentName("com.vivo.permissionmanager",
+                            "com.vivo.permissionmanager.activity.BgStartUpManagerActivity"));
+                } else if (manufacturer.contains("meizu")) {
+                    // 魅族
+                    intent.setComponent(new ComponentName("com.meizu.safe",
+                            "com.meizu.safe.security.SHOW_APPSEC"));
+                    intent.addCategory(Intent.CATEGORY_DEFAULT);
+                    intent.putExtra("packageName", getPackageName());
+                } else if (manufacturer.contains("samsung")) {
+                    // 三星
+                    intent.setComponent(new ComponentName("com.samsung.android.lool",
+                            "com.samsung.android.sm.ui.battery.BatteryActivity"));
+                } else {
+                    // 其他品牌，打开应用详情页
+                    intent.setAction(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                    intent.setData(Uri.parse("package:" + getPackageName()));
+                }
+
+                startActivity(intent);
+            } catch (Exception e) {
+                // 如果打开失败，提示用户手动设置
+                Toast.makeText(this, "无法自动打开，请在系统设置中手动允许自启动", Toast.LENGTH_LONG).show();
+                // 打开应用详情页作为备选
+                Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
                 intent.setData(Uri.parse("package:" + getPackageName()));
                 startActivity(intent);
             }
