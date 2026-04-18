@@ -409,6 +409,28 @@ public class FloatingLobsterService extends Service {
         rvMessages = messagePopupView.findViewById(R.id.rvMessages);
         TextView btnDismissAll = messagePopupView.findViewById(R.id.btnDismissAll);
 
+        // 检测锁屏状态
+        android.app.KeyguardManager keyguardManager = (android.app.KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
+        boolean isLocked = keyguardManager != null && keyguardManager.isKeyguardLocked();
+
+        // 锁屏时点亮屏幕
+        boolean wakeScreen = prefs.getBoolean("wakeScreenOnMessage", true);
+        if (isLocked && wakeScreen) {
+            android.os.PowerManager powerManager = (android.os.PowerManager) getSystemService(Context.POWER_SERVICE);
+            if (powerManager != null) {
+                android.os.PowerManager.WakeLock wakeLock = powerManager.newWakeLock(
+                        android.os.PowerManager.SCREEN_BRIGHT_WAKE_LOCK
+                                | android.os.PowerManager.ACQUIRE_CAUSES_WAKEUP,
+                        "KimiClaw:MessageWakeLock"
+                );
+                wakeLock.acquire(3000);
+            }
+        }
+
+        // 锁屏时是否显示消息内容
+        boolean showContentOnLockScreen = prefs.getBoolean("showContentOnLockScreen", true);
+        boolean hideContent = isLocked && !showContentOnLockScreen;
+
         // 设置RecyclerView
         rvMessages.setLayoutManager(new LinearLayoutManager(this));
         messageAdapter = new MessagePopupAdapter(messageQueue, new MessagePopupAdapter.OnMessageActionListener() {
@@ -422,7 +444,7 @@ public class FloatingLobsterService extends Service {
             public void onDismissClick(MessageItem item, int position) {
                 dismissMessage(position);
             }
-        });
+        }, hideContent);
         rvMessages.setAdapter(messageAdapter);
 
         refreshMessagePopup();
@@ -435,12 +457,20 @@ public class FloatingLobsterService extends Service {
                 ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
                 : WindowManager.LayoutParams.TYPE_PHONE;
 
+        int windowFlags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL;
+
+        // 锁屏时允许显示在锁屏界面并点亮屏幕
+        if (isLocked) {
+            windowFlags |= WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED;
+            windowFlags |= WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON;
+        }
+
         messagePopupParams = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 type,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-                        | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+                windowFlags,
                 PixelFormat.TRANSLUCENT
         );
         messagePopupParams.gravity = Gravity.TOP | Gravity.START;

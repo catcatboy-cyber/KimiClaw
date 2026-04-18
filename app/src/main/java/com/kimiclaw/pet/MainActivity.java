@@ -10,6 +10,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.PowerManager;
 import android.provider.Settings;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -382,6 +383,12 @@ public class MainActivity extends AppCompatActivity {
         Button btnPermissionOverlay = view.findViewById(R.id.btnPermissionOverlay);
         Button btnPermissionNotification = view.findViewById(R.id.btnPermissionNotification);
 
+        Button btnIgnoreBattery = view.findViewById(R.id.btnIgnoreBattery);
+        Button btnAppSettings = view.findViewById(R.id.btnAppSettings);
+        CheckBox cbWakeScreen = view.findViewById(R.id.cbWakeScreen);
+        CheckBox cbShowContentOnLockScreen = view.findViewById(R.id.cbShowContentOnLockScreen);
+        Button btnSaveLockScreen = view.findViewById(R.id.btnSaveLockScreen);
+
         RadioGroup rgPopupDuration = view.findViewById(R.id.rgPopupDuration);
         RadioButton rbDurationForever = view.findViewById(R.id.rbDurationForever);
         RadioButton rbDuration10s = view.findViewById(R.id.rbDuration10s);
@@ -522,6 +529,38 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 Toast.makeText(this, "通知监听权限已开启", Toast.LENGTH_SHORT).show();
             }
+        });
+
+        // 加载锁屏通知设置
+        boolean wakeScreen = prefs.getBoolean("wakeScreenOnMessage", true);
+        boolean showContentOnLockScreen = prefs.getBoolean("showContentOnLockScreen", true);
+        cbWakeScreen.setChecked(wakeScreen);
+        cbShowContentOnLockScreen.setChecked(showContentOnLockScreen);
+
+        // 后台运行设置按钮
+        btnIgnoreBattery.setOnClickListener(v -> {
+            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+            if (pm.isIgnoringBatteryOptimizations(getPackageName())) {
+                Toast.makeText(this, "已忽略电池优化", Toast.LENGTH_SHORT).show();
+            } else {
+                Intent intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                intent.setData(Uri.parse("package:" + getPackageName()));
+                startActivity(intent);
+            }
+        });
+
+        btnAppSettings.setOnClickListener(v -> {
+            Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+            intent.setData(Uri.parse("package:" + getPackageName()));
+            startActivity(intent);
+        });
+
+        // 保存锁屏通知设置
+        btnSaveLockScreen.setOnClickListener(v -> {
+            editor.putBoolean("wakeScreenOnMessage", cbWakeScreen.isChecked());
+            editor.putBoolean("showContentOnLockScreen", cbShowContentOnLockScreen.isChecked());
+            editor.apply();
+            Toast.makeText(this, "锁屏通知设置已保存", Toast.LENGTH_SHORT).show();
         });
 
         dialog.show();

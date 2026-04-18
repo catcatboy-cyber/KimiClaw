@@ -21,6 +21,7 @@ public class MessagePopupAdapter extends RecyclerView.Adapter<MessagePopupAdapte
 
     private final List<MessageItem> messageList;
     private final OnMessageActionListener actionListener;
+    private final boolean hideContent;
     private final SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());
 
     public interface OnMessageActionListener {
@@ -31,8 +32,13 @@ public class MessagePopupAdapter extends RecyclerView.Adapter<MessagePopupAdapte
     }
 
     public MessagePopupAdapter(List<MessageItem> messageList, OnMessageActionListener actionListener) {
+        this(messageList, actionListener, false);
+    }
+
+    public MessagePopupAdapter(List<MessageItem> messageList, OnMessageActionListener actionListener, boolean hideContent) {
         this.messageList = messageList;
         this.actionListener = actionListener;
+        this.hideContent = hideContent;
     }
 
     @NonNull
@@ -48,10 +54,16 @@ public class MessagePopupAdapter extends RecyclerView.Adapter<MessagePopupAdapte
         holder.tvAppName.setText(item.getAppName());
         holder.tvSender.setText("👤 " + (item.sender != null ? item.sender : ""));
 
-        String preview = item.content != null && item.content.length() > 50
-                ? item.content.substring(0, 50) + "..."
-                : item.content;
-        holder.tvContent.setText(preview);
+        if (hideContent) {
+            holder.tvContent.setText("🔒 消息内容已隐藏");
+            holder.tvContent.setTextColor(0xFFB0B0B0);
+        } else {
+            String preview = item.content != null && item.content.length() > 50
+                    ? item.content.substring(0, 50) + "..."
+                    : item.content;
+            holder.tvContent.setText(preview);
+            holder.tvContent.setTextColor(0xFFE0E0E0);
+        }
         holder.tvTime.setText(timeFormat.format(new Date(item.timestamp)));
 
         // 点击整条打开对应联系人
