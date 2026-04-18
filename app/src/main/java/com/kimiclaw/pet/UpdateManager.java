@@ -424,6 +424,13 @@ public class UpdateManager {
             copyUriToFile(apkUri, cacheApk);
 
             String authority = context.getPackageName() + ".fileprovider";
+            // 检查是否有安装未知来源应用的权限（Android 8.0+）
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+                    && !context.getPackageManager().canRequestPackageInstalls()) {
+                showInstallPermissionDialog();
+                return;
+            }
+
             Uri installUri = FileProvider.getUriForFile(context, authority, cacheApk);
 
             Intent intent = new Intent(Intent.ACTION_VIEW);
@@ -523,6 +530,13 @@ public class UpdateManager {
             return;
         }
 
+        // 检查是否有安装未知来源应用的权限（Android 8.0+）
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+                && !context.getPackageManager().canRequestPackageInstalls()) {
+            showInstallPermissionDialog();
+            return;
+        }
+
         try {
             Intent intent = new Intent(Intent.ACTION_VIEW);
             intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -607,6 +621,24 @@ public class UpdateManager {
         builder.setTitle("自动安装失败");
         builder.setMessage("APK已下载到:\n" + apkFile.getAbsolutePath() + "\n\n请手动安装：\n1. 打开文件管理器\n2. 找到下载目录\n3. 点击KimiClaw_update.apk安装\n\n如果提示签名冲突，请先卸载旧版本");
         builder.setPositiveButton("知道了", null);
+        builder.show();
+    }
+
+    /**
+     * 显示安装权限引导对话框（Android 8.0+）
+     */
+    private void showInstallPermissionDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setTitle("需要安装权限");
+        builder.setMessage("Android 8.0+ 需要单独授予「安装未知来源应用」权限才能自动更新\n\n请在设置中打开此权限后重试");
+        builder.setPositiveButton("去开启", (dialog, which) -> {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                Intent intent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES);
+                intent.setData(Uri.parse("package:" + context.getPackageName()));
+                context.startActivity(intent);
+            }
+        });
+        builder.setNegativeButton("取消", null);
         builder.show();
     }
 

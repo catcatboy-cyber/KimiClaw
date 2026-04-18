@@ -385,6 +385,7 @@ public class MainActivity extends AppCompatActivity {
 
         Button btnIgnoreBattery = view.findViewById(R.id.btnIgnoreBattery);
         Button btnAppSettings = view.findViewById(R.id.btnAppSettings);
+        Button btnInstallPermission = view.findViewById(R.id.btnInstallPermission);
         CheckBox cbWakeScreen = view.findViewById(R.id.cbWakeScreen);
         CheckBox cbShowContentOnLockScreen = view.findViewById(R.id.cbShowContentOnLockScreen);
         Button btnSaveLockScreen = view.findViewById(R.id.btnSaveLockScreen);
@@ -553,6 +554,20 @@ public class MainActivity extends AppCompatActivity {
             Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
             intent.setData(Uri.parse("package:" + getPackageName()));
             startActivity(intent);
+        });
+
+        btnInstallPermission.setOnClickListener(v -> {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                if (getPackageManager().canRequestPackageInstalls()) {
+                    Toast.makeText(this, "已允许安装未知来源应用", Toast.LENGTH_SHORT).show();
+                } else {
+                    Intent intent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES);
+                    intent.setData(Uri.parse("package:" + getPackageName()));
+                    startActivity(intent);
+                }
+            } else {
+                Toast.makeText(this, "Android 8.0 以下无需此权限", Toast.LENGTH_SHORT).show();
+            }
         });
 
         // 保存锁屏通知设置
