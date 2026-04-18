@@ -409,21 +409,27 @@ public class FloatingLobsterService extends Service {
         rvMessages = messagePopupView.findViewById(R.id.rvMessages);
         TextView btnDismissAll = messagePopupView.findViewById(R.id.btnDismissAll);
 
-        // 检测锁屏状态
+        // 检测锁屏和屏幕状态
         android.app.KeyguardManager keyguardManager = (android.app.KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
+        android.os.PowerManager powerManager = (android.os.PowerManager) getSystemService(Context.POWER_SERVICE);
         boolean isLocked = keyguardManager != null && keyguardManager.isKeyguardLocked();
+        boolean isScreenOn = powerManager != null && powerManager.isInteractive();
+        Log.d(TAG, "showMessagePopup: isLocked=" + isLocked + ", isScreenOn=" + isScreenOn);
 
         // 锁屏时点亮屏幕
         boolean wakeScreen = prefs.getBoolean("wakeScreenOnMessage", true);
-        if (isLocked && wakeScreen) {
-            android.os.PowerManager powerManager = (android.os.PowerManager) getSystemService(Context.POWER_SERVICE);
-            if (powerManager != null) {
+        if (isLocked && wakeScreen && powerManager != null && !isScreenOn) {
+            try {
                 android.os.PowerManager.WakeLock wakeLock = powerManager.newWakeLock(
-                        android.os.PowerManager.SCREEN_BRIGHT_WAKE_LOCK
-                                | android.os.PowerManager.ACQUIRE_CAUSES_WAKEUP,
+                        android.os.PowerManager.FULL_WAKE_LOCK
+                                | android.os.PowerManager.ACQUIRE_CAUSES_WAKEUP
+                                | android.os.PowerManager.ON_AFTER_RELEASE,
                         "KimiClaw:MessageWakeLock"
                 );
                 wakeLock.acquire(3000);
+                Log.d(TAG, "WakeLock acquired for 3000ms");
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to acquire WakeLock", e);
             }
         }
 
@@ -464,6 +470,8 @@ public class FloatingLobsterService extends Service {
         if (isLocked) {
             windowFlags |= WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED;
             windowFlags |= WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON;
+            windowFlags |= WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON;
+            Log.d(TAG, "Window flags: SHOW_WHEN_LOCKED + TURN_SCREEN_ON + KEEP_SCREEN_ON");
         }
 
         messagePopupParams = new WindowManager.LayoutParams(
