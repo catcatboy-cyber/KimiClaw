@@ -598,20 +598,43 @@ public class MainActivity extends AppCompatActivity {
         CheckBox cbShowContent = view.findViewById(R.id.cbShowContent);
         Button btnSaveMonitor = view.findViewById(R.id.btnSaveMonitor);
 
-        // 加载已保存的联系人
-        Set<String> contacts = prefs.getStringSet("monitoredContacts", new HashSet<>());
+        // 加载已保存的联系人（需要创建可修改的副本）
+        Set<String> contacts = new HashSet<>(prefs.getStringSet("monitoredContacts", new HashSet<>()));
         List<String> contactListData = new ArrayList<>(contacts);
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, contactListData);
         contactList.setAdapter(adapter);
 
+        // 添加联系人
         btnAddContact.setOnClickListener(v -> {
             String contact = contactInput.getText().toString().trim();
             if (!contact.isEmpty()) {
-                contacts.add(contact);
-                contactListData.add(contact);
-                adapter.notifyDataSetChanged();
-                contactInput.setText("");
+                if (contacts.contains(contact)) {
+                    Toast.makeText(this, "该联系人已存在", Toast.LENGTH_SHORT).show();
+                } else {
+                    contacts.add(contact);
+                    contactListData.add(contact);
+                    adapter.notifyDataSetChanged();
+                    contactInput.setText("");
+                    Toast.makeText(this, "已添加：" + contact, Toast.LENGTH_SHORT).show();
+                }
             }
+        });
+
+        // 长按删除联系人
+        contactList.setOnItemLongClickListener((parent, view1, position, id) -> {
+            String contactToDelete = contactListData.get(position);
+            new AlertDialog.Builder(this)
+                    .setTitle("删除联系人")
+                    .setMessage("确定要删除「" + contactToDelete + "」吗？")
+                    .setPositiveButton("删除", (dialog1, which) -> {
+                        contacts.remove(contactToDelete);
+                        contactListData.remove(position);
+                        adapter.notifyDataSetChanged();
+                        Toast.makeText(this, "已删除：" + contactToDelete, Toast.LENGTH_SHORT).show();
+                    })
+                    .setNegativeButton("取消", null)
+                    .show();
+            return true;
         });
 
         AlertDialog dialog = builder.create();
