@@ -416,13 +416,29 @@ public class UpdateManager {
                 }
             } else if ("file".equals(apkUri.getScheme())) {
                 Log.d(TAG, "Reading from file URI");
-                String path = apkUri.getPath();
-                if (path != null && path.startsWith("/raw:")) {
-                    path = path.substring(5);
+                // Android 10+ 分区存储：不能直接访问 file:// 路径
+                // 需要通过 DownloadManager 的 openDownloadedFile 或 ContentResolver
+                try {
+                    // 尝试通过 DownloadManager 打开
+                    android.os.ParcelFileDescriptor pfd = downloadManager.openDownloadedFile(downloadId);
+                    if (pfd != null) {
+                        java.io.FileInputStream fis = new java.io.FileInputStream(pfd.getFileDescriptor());
+                        read = fis.read(header);
+                        fis.close();
+                        pfd.close();
+                        Log.d(TAG, "Successfully read via DownloadManager.openDownloadedFile");
+                    }
+                } catch (Exception e) {
+                    Log.w(TAG, "Failed to read via DownloadManager, trying direct file access", e);
+                    // 降级：尝试直接文件访问（可能在旧版本 Android 上工作）
+                    String path = apkUri.getPath();
+                    if (path != null && path.startsWith("/raw:")) {
+                        path = path.substring(5);
+                    }
+                    java.io.FileInputStream fis = new java.io.FileInputStream(path);
+                    read = fis.read(header);
+                    fis.close();
                 }
-                java.io.FileInputStream fis = new java.io.FileInputStream(path);
-                read = fis.read(header);
-                fis.close();
             }
 
             StringBuilder hex = new StringBuilder();
@@ -484,11 +500,22 @@ public class UpdateManager {
             if ("content".equals(sourceUri.getScheme())) {
                 in = context.getContentResolver().openInputStream(sourceUri);
             } else if ("file".equals(sourceUri.getScheme())) {
-                String path = sourceUri.getPath();
-                if (path != null && path.startsWith("/raw:")) {
-                    path = path.substring(5);
+                // Android 10+ 分区存储：优先使用 DownloadManager 打开
+                try {
+                    android.os.ParcelFileDescriptor pfd = downloadManager.openDownloadedFile(downloadId);
+                    if (pfd != null) {
+                        in = new java.io.FileInputStream(pfd.getFileDescriptor());
+                        Log.d(TAG, "Opened file via DownloadManager.openDownloadedFile");
+                    }
+                } catch (Exception e) {
+                    Log.w(TAG, "Failed to open via DownloadManager, trying direct file access", e);
+                    // 降级：尝试直接文件访问
+                    String path = sourceUri.getPath();
+                    if (path != null && path.startsWith("/raw:")) {
+                        path = path.substring(5);
+                    }
+                    in = new java.io.FileInputStream(path);
                 }
-                in = new java.io.FileInputStream(path);
             }
             if (in == null) {
                 throw new Exception("Cannot open input stream for URI: " + sourceUri);
