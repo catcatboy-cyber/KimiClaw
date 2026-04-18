@@ -84,6 +84,9 @@ public class UpdateManager {
                     reader.close();
 
                     parseReleaseInfo(response.toString(), showNoUpdateToast);
+
+                    // 成功检查后更新时间戳
+                    prefs.edit().putLong("last_update_check", System.currentTimeMillis()).apply();
                 } else {
                     String errorMsg = getErrorMessage(responseCode);
                     mainHandler.post(() -> {
@@ -212,13 +215,16 @@ public class UpdateManager {
     }
 
     /**
-     * 获取当前版本号
+     * 获取当前版本号 - 直接使用 versionCode
      */
     private int getCurrentVersionCode() {
         try {
             PackageInfo packageInfo = context.getPackageManager().getPackageInfo(context.getPackageName(), 0);
-            String versionName = packageInfo.versionName;
-            return parseVersionNumber(versionName);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                return (int) packageInfo.getLongVersionCode();
+            } else {
+                return packageInfo.versionCode;
+            }
         } catch (PackageManager.NameNotFoundException e) {
             return 0;
         }
@@ -402,6 +408,7 @@ public class UpdateManager {
     private void installApkFromUri(Uri apkUri) {
         Log.d(TAG, "installApkFromUri called with URI: " + apkUri.toString());
 
+        android.os.ParcelFileDescriptor pfd = null;
         try {
             // 1. 读取文件头校验（支持 content:// 和 file://）
             byte[] header = new byte[4];
@@ -420,12 +427,11 @@ public class UpdateManager {
                 // 需要通过 DownloadManager 的 openDownloadedFile 或 ContentResolver
                 try {
                     // 尝试通过 DownloadManager 打开
-                    android.os.ParcelFileDescriptor pfd = downloadManager.openDownloadedFile(downloadId);
+                    pfd = downloadManager.openDownloadedFile(downloadId);
                     if (pfd != null) {
                         java.io.FileInputStream fis = new java.io.FileInputStream(pfd.getFileDescriptor());
                         read = fis.read(header);
                         fis.close();
-                        pfd.close();
                         Log.d(TAG, "Successfully read via DownloadManager.openDownloadedFile");
                     }
                 } catch (Exception e) {
@@ -461,6 +467,13 @@ public class UpdateManager {
             // 2. 统一拷贝到应用私有缓存目录，再用 FileProvider 生成带权限的 URI
             Log.d(TAG, "Copying APK to cache directory");
             File cacheApk = new File(context.getCacheDir(), "KimiClaw_update.apk");
+
+            // 删除旧的缓存文件
+            if (cacheApk.exists()) {
+                boolean deleted = cacheApk.delete();
+                Log.d(TAG, "Old cache APK deleted: " + deleted);
+            }
+
             copyUriToFile(apkUri, cacheApk);
 
             String authority = context.getPackageName() + ".fileprovider";
@@ -487,6 +500,16 @@ public class UpdateManager {
             String errorMsg = e.getMessage();
             Log.e(TAG, "Install error: " + errorMsg, e);
             Toast.makeText(context, "安装失败: " + errorMsg, Toast.LENGTH_LONG).show();
+        } finally {
+            // 关闭 ParcelFileDescriptor 防止泄漏
+            if (pfd != null) {
+                try {
+                    pfd.close();
+                    Log.d(TAG, "ParcelFileDescriptor closed");
+                } catch (Exception e) {
+                    Log.e(TAG, "Failed to close ParcelFileDescriptor", e);
+                }
+            }
         }
     }
 
@@ -496,13 +519,14 @@ public class UpdateManager {
     private void copyUriToFile(Uri sourceUri, File destFile) throws Exception {
         java.io.InputStream in = null;
         java.io.FileOutputStream out = null;
+        android.os.ParcelFileDescriptor pfd = null;
         try {
             if ("content".equals(sourceUri.getScheme())) {
                 in = context.getContentResolver().openInputStream(sourceUri);
             } else if ("file".equals(sourceUri.getScheme())) {
                 // Android 10+ 分区存储：优先使用 DownloadManager 打开
                 try {
-                    android.os.ParcelFileDescriptor pfd = downloadManager.openDownloadedFile(downloadId);
+                    pfd = downloadManager.openDownloadedFile(downloadId);
                     if (pfd != null) {
                         in = new java.io.FileInputStream(pfd.getFileDescriptor());
                         Log.d(TAG, "Opened file via DownloadManager.openDownloadedFile");
@@ -530,6 +554,10 @@ public class UpdateManager {
         } finally {
             if (in != null) in.close();
             if (out != null) out.close();
+            if (pfd != null) {
+                pfd.close();
+                Log.d(TAG, "ParcelFileDescriptor closed in copyUriToFile");
+            }
         }
     }
 

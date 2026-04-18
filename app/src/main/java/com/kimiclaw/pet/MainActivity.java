@@ -174,10 +174,9 @@ public class MainActivity extends AppCompatActivity {
         // 24小时检查一次
         if (now - lastCheck > 24 * 60 * 60 * 1000) {
             if (updateManager != null) {
+                // 不在这里更新时间戳，让 UpdateManager 在成功后更新
                 updateManager.checkForUpdate(false);
             }
-            editor.putLong("last_update_check", now);
-            editor.apply();
         }
     }
 
