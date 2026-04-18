@@ -877,6 +877,13 @@ public class FloatingLobsterService extends Service {
             else if ("com.sina.weibo".equals(packageName)) appName = "微博";
             else if ("com.alibaba.android.rimet".equals(packageName)) appName = "钉钉";
 
+            // 根据设置决定是否显示消息内容
+            boolean showContentOnLockScreen = prefs.getBoolean("showContentOnLockScreen", true);
+            String displayText = showContentOnLockScreen ? content : "🔒 收到一条新消息";
+
+            // 根据设置决定是否每次通知都触发亮屏/声音
+            boolean alertEveryTime = prefs.getBoolean("alertEveryTime", true);
+
             // 点击通知：打开对应应用
             Intent launchIntent = getPackageManager().getLaunchIntentForPackage(packageName);
             if (launchIntent == null) {
@@ -887,24 +894,25 @@ public class FloatingLobsterService extends Service {
                     this, 0, launchIntent, PendingIntent.FLAG_IMMUTABLE
             );
 
-            // 构建通知
+            // 构建通知：每次都用唯一ID
+            int notifyId = (int) System.currentTimeMillis();
             Notification.Builder builder = new Notification.Builder(this, LOCK_SCREEN_CHANNEL_ID)
                     .setContentTitle("📱 " + sender + "（" + appName + "）")
-                    .setContentText(content)
+                    .setContentText(displayText)
                     .setSmallIcon(android.R.drawable.ic_dialog_email)
                     .setContentIntent(pendingIntent)
                     .setAutoCancel(true)
                     .setPriority(Notification.PRIORITY_HIGH)
-                    .setCategory(Notification.CATEGORY_MESSAGE);
+                    .setCategory(Notification.CATEGORY_MESSAGE)
+                    .setOnlyAlertOnce(!alertEveryTime);
 
-            // Android 8.0+ 渠道已设置 IMPORTANCE_HIGH，这里不需要额外设置
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 builder.setChannelId(LOCK_SCREEN_CHANNEL_ID);
             }
 
             NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-            notificationManager.notify((int) System.currentTimeMillis(), builder.build());
-            Log.d(TAG, "Lock screen notification sent: " + sender + " - " + content);
+            notificationManager.notify(notifyId, builder.build());
+            Log.d(TAG, "Lock screen notification sent: id=" + notifyId + ", sender=" + sender + ", showContent=" + showContentOnLockScreen + ", alertEveryTime=" + alertEveryTime);
         } catch (Exception e) {
             Log.e(TAG, "Failed to send lock screen notification", e);
         }

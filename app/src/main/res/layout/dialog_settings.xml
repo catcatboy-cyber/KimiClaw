@@ -274,6 +274,13 @@
             android:text="锁屏时显示消息内容"
             android:textSize="13sp" />
 
+        <CheckBox
+            android:id="@+id/cbAlertEveryTime"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="每次通知都触发亮屏/声音"
+            android:textSize="13sp" />
+
         <Button
             android:id="@+id/btnSaveLockScreen"
             android:layout_width="match_parent"

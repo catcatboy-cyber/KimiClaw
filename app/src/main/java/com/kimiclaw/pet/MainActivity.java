@@ -388,6 +388,7 @@ public class MainActivity extends AppCompatActivity {
         Button btnInstallPermission = view.findViewById(R.id.btnInstallPermission);
         CheckBox cbWakeScreen = view.findViewById(R.id.cbWakeScreen);
         CheckBox cbShowContentOnLockScreen = view.findViewById(R.id.cbShowContentOnLockScreen);
+        CheckBox cbAlertEveryTime = view.findViewById(R.id.cbAlertEveryTime);
         Button btnSaveLockScreen = view.findViewById(R.id.btnSaveLockScreen);
 
         RadioGroup rgPopupDuration = view.findViewById(R.id.rgPopupDuration);
@@ -535,8 +536,10 @@ public class MainActivity extends AppCompatActivity {
         // 加载锁屏通知设置
         boolean wakeScreen = prefs.getBoolean("wakeScreenOnMessage", true);
         boolean showContentOnLockScreen = prefs.getBoolean("showContentOnLockScreen", true);
+        boolean alertEveryTime = prefs.getBoolean("alertEveryTime", true);
         cbWakeScreen.setChecked(wakeScreen);
         cbShowContentOnLockScreen.setChecked(showContentOnLockScreen);
+        cbAlertEveryTime.setChecked(alertEveryTime);
 
         // 后台运行设置按钮
         btnIgnoreBattery.setOnClickListener(v -> {
@@ -574,6 +577,7 @@ public class MainActivity extends AppCompatActivity {
         btnSaveLockScreen.setOnClickListener(v -> {
             editor.putBoolean("wakeScreenOnMessage", cbWakeScreen.isChecked());
             editor.putBoolean("showContentOnLockScreen", cbShowContentOnLockScreen.isChecked());
+            editor.putBoolean("alertEveryTime", cbAlertEveryTime.isChecked());
             editor.apply();
             Toast.makeText(this, "锁屏通知设置已保存", Toast.LENGTH_SHORT).show();
         });
