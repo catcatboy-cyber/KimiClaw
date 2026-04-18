@@ -67,6 +67,7 @@ public class FloatingLobsterService extends Service {
     private static final int LOBSTER_SIZE = 140;
     private static final int MESSAGE_POPUP_WIDTH_DP = 320;
     private static final String CHANNEL_ID = "KimiClawChannel";
+    private static final String LOCK_SCREEN_CHANNEL_ID = "KimiClawLockScreenChannel";
     private static final String TAG = "FloatingLobster";
 
     // 消息队列：支持多App、多联系人、多条消息
@@ -114,13 +115,25 @@ public class FloatingLobsterService extends Service {
 
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(
+            NotificationManager manager = getSystemService(NotificationManager.class);
+
+            // 前台服务通知渠道
+            NotificationChannel serviceChannel = new NotificationChannel(
                     CHANNEL_ID,
                     "KimiClaw Service",
                     NotificationManager.IMPORTANCE_LOW
             );
-            NotificationManager manager = getSystemService(NotificationManager.class);
-            manager.createNotificationChannel(channel);
+            manager.createNotificationChannel(serviceChannel);
+
+            // 锁屏消息提醒渠道（高优先级，可亮屏）
+            NotificationChannel lockScreenChannel = new NotificationChannel(
+                    LOCK_SCREEN_CHANNEL_ID,
+                    "锁屏消息提醒",
+                    NotificationManager.IMPORTANCE_HIGH
+            );
+            lockScreenChannel.setDescription("锁屏时收到监控联系人消息的通知提醒");
+            lockScreenChannel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+            manager.createNotificationChannel(lockScreenChannel);
         }
     }
 
@@ -436,6 +449,11 @@ public class FloatingLobsterService extends Service {
         // 锁屏时是否显示消息内容
         boolean showContentOnLockScreen = prefs.getBoolean("showContentOnLockScreen", true);
         boolean hideContent = isLocked && !showContentOnLockScreen;
+
+        // 锁屏时发送系统通知兜底（弹窗可能被ROM拦截，通知更可靠）
+        if (isLocked) {
+            sendLockScreenNotification(safeSender, safeContent, safePackage);
+        }
 
         // 设置RecyclerView
         rvMessages.setLayoutManager(new LinearLayoutManager(this));
@@ -845,6 +863,51 @@ public class FloatingLobsterService extends Service {
     @Override
     public IBinder onBind(Intent intent) {
         return null;
+    }
+
+    /**
+     * 锁屏时发送系统通知兜底
+     * 弹窗在锁屏上可能被ROM拦截，通知是更可靠的标准机制
+     */
+    private void sendLockScreenNotification(String sender, String content, String packageName) {
+        try {
+            String appName = "消息";
+            if ("com.tencent.mm".equals(packageName)) appName = "微信";
+            else if ("com.tencent.mobileqq".equals(packageName)) appName = "QQ";
+            else if ("com.sina.weibo".equals(packageName)) appName = "微博";
+            else if ("com.alibaba.android.rimet".equals(packageName)) appName = "钉钉";
+
+            // 点击通知：打开对应应用
+            Intent launchIntent = getPackageManager().getLaunchIntentForPackage(packageName);
+            if (launchIntent == null) {
+                launchIntent = new Intent(this, MainActivity.class);
+            }
+            launchIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            PendingIntent pendingIntent = PendingIntent.getActivity(
+                    this, 0, launchIntent, PendingIntent.FLAG_IMMUTABLE
+            );
+
+            // 构建通知
+            Notification.Builder builder = new Notification.Builder(this, LOCK_SCREEN_CHANNEL_ID)
+                    .setContentTitle("📱 " + sender + "（" + appName + "）")
+                    .setContentText(content)
+                    .setSmallIcon(android.R.drawable.ic_dialog_email)
+                    .setContentIntent(pendingIntent)
+                    .setAutoCancel(true)
+                    .setPriority(Notification.PRIORITY_HIGH)
+                    .setCategory(Notification.CATEGORY_MESSAGE);
+
+            // Android 8.0+ 渠道已设置 IMPORTANCE_HIGH，这里不需要额外设置
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                builder.setChannelId(LOCK_SCREEN_CHANNEL_ID);
+            }
+
+            NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            notificationManager.notify((int) System.currentTimeMillis(), builder.build());
+            Log.d(TAG, "Lock screen notification sent: " + sender + " - " + content);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to send lock screen notification", e);
+        }
     }
 
     @Override
