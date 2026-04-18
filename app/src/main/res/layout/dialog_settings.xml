@@ -1,310 +1,321 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:padding="20dp"
-    android:background="@drawable/dialog_bg">
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="⚙️ 设置"
-        android:textSize="22sp"
-        android:textStyle="bold"
-        android:textColor="@color/lobster_red"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginBottom="16dp" />
-
-    <!-- GLM API Key 配置 -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="GLM API Key 配置"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:textColor="@color/black"
-        android:layout_marginBottom="8dp" />
-
-    <EditText
-        android:id="@+id/apiKeyInput"
-        android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:hint="输入 GLM API Key"
-        android:padding="12dp"
-        android:background="@drawable/input_bg"
-        android:textSize="14sp"
-        android:inputType="textPassword"
-        android:layout_marginBottom="12dp" />
+    android:layout_height="match_parent"
+    android:fillViewport="true">
 
     <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginBottom="20dp">
-
-        <Button
-            android:id="@+id/btnSaveKey"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_weight="1"
-            android:text="💾 保存"
-            android:backgroundTint="@color/lobster_red"
-            android:layout_marginEnd="8dp" />
-
-        <Button
-            android:id="@+id/btnGetKey"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_weight="1"
-            android:text="🔑 获取Key"
-            android:backgroundTint="#4CAF50" />
-    </LinearLayout>
-
-    <!-- 分割线 -->
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="#EEEEEE"
-        android:layout_marginBottom="16dp" />
-
-    <!-- 配置备份 -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="配置备份与恢复"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:textColor="@color/black"
-        android:layout_marginBottom="8dp" />
-
-    <TextView
-        android:id="@+id/configStatusText"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="未找到备份配置"
-        android:textSize="12sp"
-        android:textColor="@color/gray"
-        android:layout_marginBottom="12dp" />
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginBottom="8dp">
-
-        <Button
-            android:id="@+id/btnExportConfig"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_weight="1"
-            android:text="📤 导出配置"
-            android:backgroundTint="#2196F3"
-            android:layout_marginEnd="8dp" />
-
-        <Button
-            android:id="@+id/btnImportConfig"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_weight="1"
-            android:text="📥 导入配置"
-            android:backgroundTint="#FF9800" />
-    </LinearLayout>
-
-    <!-- 分割线 -->
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="#EEEEEE"
-        android:layout_marginTop="8dp"
-        android:layout_marginBottom="16dp" />
-
-    <!-- 消息弹窗持续时间 -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="消息弹窗持续时间"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:textColor="@color/black"
-        android:layout_marginBottom="8dp" />
-
-    <RadioGroup
-        android:id="@+id/rgPopupDuration"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:layout_marginBottom="8dp">
+        android:padding="16dp"
+        android:background="@drawable/dialog_bg">
 
-        <RadioButton
-            android:id="@+id/rbDurationForever"
+        <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="永久显示（手动关闭）"
-            android:textSize="14sp" />
+            android:text="⚙️ 设置"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="@color/lobster_red"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="12dp" />
 
-        <RadioButton
-            android:id="@+id/rbDuration10s"
+        <!-- GLM API Key 配置 -->
+        <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="10 秒"
-            android:textSize="14sp" />
+            android:text="GLM API Key 配置"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:textColor="@color/black"
+            android:layout_marginBottom="6dp" />
 
-        <RadioButton
-            android:id="@+id/rbDurationCustom"
+        <EditText
+            android:id="@+id/apiKeyInput"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:hint="输入 GLM API Key"
+            android:padding="10dp"
+            android:background="@drawable/input_bg"
+            android:textSize="13sp"
+            android:inputType="textPassword"
+            android:layout_marginBottom="8dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="12dp">
+
+            <Button
+                android:id="@+id/btnSaveKey"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:text="💾 保存"
+                android:backgroundTint="@color/lobster_red"
+                android:layout_marginEnd="6dp"
+                android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/btnGetKey"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:text="🔑 获取Key"
+                android:backgroundTint="#4CAF50"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#EEEEEE"
+            android:layout_marginBottom="12dp" />
+
+        <!-- 配置备份 -->
+        <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="自定义"
-            android:textSize="14sp" />
-    </RadioGroup>
+            android:text="配置备份与恢复"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:textColor="@color/black"
+            android:layout_marginBottom="6dp" />
 
-    <EditText
-        android:id="@+id/etCustomDuration"
-        android:layout_width="match_parent"
-        android:layout_height="48dp"
-        android:hint="输入秒数（例如 30）"
-        android:padding="12dp"
-        android:background="@drawable/input_bg"
-        android:textSize="14sp"
-        android:inputType="number"
-        android:visibility="gone"
-        android:layout_marginBottom="8dp" />
+        <TextView
+            android:id="@+id/configStatusText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="未找到备份配置"
+            android:textSize="11sp"
+            android:textColor="@color/gray"
+            android:layout_marginBottom="8dp" />
 
-    <Button
-        android:id="@+id/btnSaveDuration"
-        android:layout_width="match_parent"
-        android:layout_height="48dp"
-        android:text="💾 保存持续时间"
-        android:backgroundTint="@color/lobster_red"
-        android:layout_marginBottom="16dp" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="12dp">
 
-    <!-- 分割线 -->
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="#EEEEEE"
-        android:layout_marginBottom="16dp" />
+            <Button
+                android:id="@+id/btnExportConfig"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:text="📤 导出配置"
+                android:backgroundTint="#2196F3"
+                android:layout_marginEnd="6dp"
+                android:textSize="12sp" />
 
-    <!-- 后台运行设置 -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="后台运行设置"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:textColor="@color/black"
-        android:layout_marginBottom="4dp" />
+            <Button
+                android:id="@+id/btnImportConfig"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:text="📥 导入配置"
+                android:backgroundTint="#FF9800"
+                android:textSize="12sp" />
+        </LinearLayout>
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="为保证消息监控和悬浮窗不被系统杀掉，请允许本应用后台运行"
-        android:textSize="12sp"
-        android:textColor="@color/gray"
-        android:layout_marginBottom="8dp" />
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#EEEEEE"
+            android:layout_marginBottom="12dp" />
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginBottom="16dp">
+        <!-- 消息弹窗持续时间 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="消息弹窗持续时间"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:textColor="@color/black"
+            android:layout_marginBottom="6dp" />
+
+        <RadioGroup
+            android:id="@+id/rgPopupDuration"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginBottom="6dp">
+
+            <RadioButton
+                android:id="@+id/rbDurationForever"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="永久显示（手动关闭）"
+                android:textSize="13sp" />
+
+            <RadioButton
+                android:id="@+id/rbDuration10s"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="10 秒"
+                android:textSize="13sp" />
+
+            <RadioButton
+                android:id="@+id/rbDurationCustom"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="自定义"
+                android:textSize="13sp" />
+        </RadioGroup>
+
+        <EditText
+            android:id="@+id/etCustomDuration"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:hint="输入秒数（例如 30）"
+            android:padding="10dp"
+            android:background="@drawable/input_bg"
+            android:textSize="13sp"
+            android:inputType="number"
+            android:visibility="gone"
+            android:layout_marginBottom="6dp" />
 
         <Button
-            android:id="@+id/btnIgnoreBattery"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_weight="1"
-            android:text="忽略电池优化"
-            android:backgroundTint="#FF5722"
-            android:layout_marginEnd="8dp" />
+            android:id="@+id/btnSaveDuration"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:text="💾 保存持续时间"
+            android:backgroundTint="@color/lobster_red"
+            android:layout_marginBottom="12dp"
+            android:textSize="12sp" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#EEEEEE"
+            android:layout_marginBottom="12dp" />
+
+        <!-- 后台运行设置 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="后台运行设置"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:textColor="@color/black"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="为保证消息监控和悬浮窗不被系统杀掉，请允许本应用后台运行"
+            android:textSize="11sp"
+            android:textColor="@color/gray"
+            android:layout_marginBottom="6dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="12dp">
+
+            <Button
+                android:id="@+id/btnIgnoreBattery"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:text="忽略电池优化"
+                android:backgroundTint="#FF5722"
+                android:layout_marginEnd="6dp"
+                android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/btnAppSettings"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:text="打开应用设置"
+                android:backgroundTint="#607D8B"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#EEEEEE"
+            android:layout_marginBottom="12dp" />
+
+        <!-- 锁屏通知 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="锁屏通知"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:textColor="@color/black"
+            android:layout_marginBottom="6dp" />
+
+        <CheckBox
+            android:id="@+id/cbWakeScreen"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="锁屏时点亮屏幕"
+            android:textSize="13sp" />
+
+        <CheckBox
+            android:id="@+id/cbShowContentOnLockScreen"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="锁屏时显示消息内容"
+            android:textSize="13sp" />
 
         <Button
-            android:id="@+id/btnAppSettings"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_weight="1"
-            android:text="打开应用设置"
-            android:backgroundTint="#607D8B" />
+            android:id="@+id/btnSaveLockScreen"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:layout_marginTop="6dp"
+            android:text="保存锁屏通知设置"
+            android:backgroundTint="@color/lobster_red"
+            android:layout_marginBottom="12dp"
+            android:textSize="12sp" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#EEEEEE"
+            android:layout_marginBottom="12dp" />
+
+        <!-- 权限设置 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="权限设置"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:textColor="@color/black"
+            android:layout_marginBottom="6dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="4dp">
+
+            <Button
+                android:id="@+id/btnPermissionOverlay"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:text="🔲 悬浮窗"
+                android:backgroundTint="#9C27B0"
+                android:layout_marginEnd="6dp"
+                android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/btnPermissionNotification"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:text="🔔 通知监听"
+                android:backgroundTint="#9C27B0"
+                android:textSize="12sp" />
+        </LinearLayout>
+
     </LinearLayout>
-
-    <!-- 分割线 -->
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="#EEEEEE"
-        android:layout_marginBottom="16dp" />
-
-    <!-- 锁屏通知 -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="锁屏通知"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:textColor="@color/black"
-        android:layout_marginBottom="8dp" />
-
-    <CheckBox
-        android:id="@+id/cbWakeScreen"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="锁屏时点亮屏幕"
-        android:textSize="14sp" />
-
-    <CheckBox
-        android:id="@+id/cbShowContentOnLockScreen"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="锁屏时显示消息内容"
-        android:textSize="14sp" />
-
-    <Button
-        android:id="@+id/btnSaveLockScreen"
-        android:layout_width="match_parent"
-        android:layout_height="48dp"
-        android:layout_marginTop="8dp"
-        android:text="保存锁屏通知设置"
-        android:backgroundTint="@color/lobster_red"
-        android:layout_marginBottom="16dp" />
-
-    <!-- 分割线 -->
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="#EEEEEE"
-        android:layout_marginBottom="16dp" />
-
-    <!-- 权限设置 -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="权限设置"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:textColor="@color/black"
-        android:layout_marginBottom="8dp" />
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal">
-
-        <Button
-            android:id="@+id/btnPermissionOverlay"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_weight="1"
-            android:text="🔲 悬浮窗"
-            android:backgroundTint="#9C27B0"
-            android:layout_marginEnd="8dp" />
-
-        <Button
-            android:id="@+id/btnPermissionNotification"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_weight="1"
-            android:text="🔔 通知监听"
-            android:backgroundTint="#9C27B0" />
-    </LinearLayout>
-
-</LinearLayout>
+</ScrollView>
