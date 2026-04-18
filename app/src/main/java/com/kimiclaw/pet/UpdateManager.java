@@ -376,25 +376,66 @@ public class UpdateManager {
 
     /**
      * 使用URI直接安装APK（从DownloadManager）
+     * 增加文件头校验，防止安装HTML错误页等非APK文件
      */
     private void installApkFromUri(Uri apkUri) {
         Log.d(TAG, "Installing from URI: " + apkUri.toString());
 
         try {
-            // Android 7.0+ 禁止通过 file:// URI 跨应用共享文件
-            // DownloadManager 返回的可能是 file:// 格式，需要转成 content://
+            // 1. 读取文件头校验（支持 content:// 和 file://）
+            byte[] header = new byte[4];
+            int read = 0;
+
+            if ("content".equals(apkUri.getScheme())) {
+                java.io.InputStream is = context.getContentResolver().openInputStream(apkUri);
+                if (is != null) {
+                    read = is.read(header);
+                    is.close();
+                }
+            } else if ("file".equals(apkUri.getScheme())) {
+                String path = apkUri.getPath();
+                // 处理华为等ROM的 /raw: 前缀
+                if (path != null && path.startsWith("/raw:")) {
+                    path = path.substring(5);
+                }
+                java.io.FileInputStream fis = new java.io.FileInputStream(path);
+                read = fis.read(header);
+                fis.close();
+            }
+
+            StringBuilder hex = new StringBuilder();
+            for (int i = 0; i < Math.min(read, 4); i++) {
+                hex.append(String.format("%02X ", header[i]));
+            }
+            Log.d(TAG, "Downloaded file header: " + hex.toString().trim());
+
+            boolean isValidApk = read >= 2 && header[0] == 0x50 && header[1] == 0x4B;
+            if (!isValidApk) {
+                Log.e(TAG, "Downloaded file is not a valid APK");
+                showInstallErrorDialog("下载文件异常",
+                        hex.toString().trim(),
+                        "不是有效APK（可能下载到了网页）",
+                        0,
+                        "请尝试用浏览器访问 GitHub Release 页面手动下载安装");
+                return;
+            }
+
+            // 2. 转换 URI 并安装
+            Uri installUri = apkUri;
             if ("file".equals(apkUri.getScheme())) {
-                File apkFile = new File(apkUri.getPath());
+                String path = apkUri.getPath();
+                if (path != null && path.startsWith("/raw:")) {
+                    path = path.substring(5);
+                }
+                File apkFile = new File(path);
                 String authority = context.getPackageName() + ".fileprovider";
-                apkUri = FileProvider.getUriForFile(context, authority, apkFile);
+                installUri = FileProvider.getUriForFile(context, authority, apkFile);
             }
 
             Intent intent = new Intent(Intent.ACTION_VIEW);
             intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
-
-            // Android 11+ resolveActivity 可能返回 null，直接尝试启动
+            intent.setDataAndType(installUri, "application/vnd.android.package-archive");
             context.startActivity(intent);
         } catch (Exception e) {
             String errorMsg = e.getMessage();
