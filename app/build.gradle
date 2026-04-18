@@ -17,8 +17,8 @@ android {
         applicationId "com.kimiclaw.pet"
         minSdk 24
         targetSdk 34
-        versionCode 48
-        versionName "48"
+        versionCode 49
+        versionName "49"
     }
 
     signingConfigs {

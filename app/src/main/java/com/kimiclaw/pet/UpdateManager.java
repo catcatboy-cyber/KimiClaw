@@ -376,7 +376,7 @@ public class UpdateManager {
 
     /**
      * 使用URI直接安装APK（从DownloadManager）
-     * 增加文件头校验，防止安装HTML错误页等非APK文件
+     * 增加文件头校验 + content URI 转私有缓存 FileProvider URI，解决安装器无权限问题
      */
     private void installApkFromUri(Uri apkUri) {
         Log.d(TAG, "Installing from URI: " + apkUri.toString());
@@ -394,7 +394,6 @@ public class UpdateManager {
                 }
             } else if ("file".equals(apkUri.getScheme())) {
                 String path = apkUri.getPath();
-                // 处理华为等ROM的 /raw: 前缀
                 if (path != null && path.startsWith("/raw:")) {
                     path = path.substring(5);
                 }
@@ -420,17 +419,12 @@ public class UpdateManager {
                 return;
             }
 
-            // 2. 转换 URI 并安装
-            Uri installUri = apkUri;
-            if ("file".equals(apkUri.getScheme())) {
-                String path = apkUri.getPath();
-                if (path != null && path.startsWith("/raw:")) {
-                    path = path.substring(5);
-                }
-                File apkFile = new File(path);
-                String authority = context.getPackageName() + ".fileprovider";
-                installUri = FileProvider.getUriForFile(context, authority, apkFile);
-            }
+            // 2. 统一拷贝到应用私有缓存目录，再用 FileProvider 生成带权限的 URI
+            File cacheApk = new File(context.getCacheDir(), "KimiClaw_update.apk");
+            copyUriToFile(apkUri, cacheApk);
+
+            String authority = context.getPackageName() + ".fileprovider";
+            Uri installUri = FileProvider.getUriForFile(context, authority, cacheApk);
 
             Intent intent = new Intent(Intent.ACTION_VIEW);
             intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -441,6 +435,38 @@ public class UpdateManager {
             String errorMsg = e.getMessage();
             Log.e(TAG, "Install error: " + errorMsg, e);
             Toast.makeText(context, "安装失败: " + errorMsg, Toast.LENGTH_LONG).show();
+        }
+    }
+
+    /**
+     * 将 URI 指向的文件拷贝到本地文件
+     */
+    private void copyUriToFile(Uri sourceUri, File destFile) throws Exception {
+        java.io.InputStream in = null;
+        java.io.FileOutputStream out = null;
+        try {
+            if ("content".equals(sourceUri.getScheme())) {
+                in = context.getContentResolver().openInputStream(sourceUri);
+            } else if ("file".equals(sourceUri.getScheme())) {
+                String path = sourceUri.getPath();
+                if (path != null && path.startsWith("/raw:")) {
+                    path = path.substring(5);
+                }
+                in = new java.io.FileInputStream(path);
+            }
+            if (in == null) {
+                throw new Exception("Cannot open input stream for URI: " + sourceUri);
+            }
+            out = new java.io.FileOutputStream(destFile);
+            byte[] buffer = new byte[8192];
+            int len;
+            while ((len = in.read(buffer)) > 0) {
+                out.write(buffer, 0, len);
+            }
+            Log.d(TAG, "Copied APK to cache: " + destFile.getAbsolutePath() + " (" + destFile.length() + " bytes)");
+        } finally {
+            if (in != null) in.close();
+            if (out != null) out.close();
         }
     }
 
