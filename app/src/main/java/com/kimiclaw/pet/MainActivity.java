@@ -658,7 +658,10 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        updateStatus();
+        // 只有在 UI 已初始化时才更新状态
+        if (hungerBar != null) {
+            updateStatus();
+        }
     }
 
     @Override
