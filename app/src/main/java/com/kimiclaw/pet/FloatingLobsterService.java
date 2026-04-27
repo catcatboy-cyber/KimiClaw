@@ -426,8 +426,7 @@ public class FloatingLobsterService extends Service {
                         "KimiClaw:MessageWakeLock"
                 );
                 wakeLock.acquire(5000);
-                // 日志脱敏
-                String maskedSender = maskSensitiveInfo(safeSender);
+                // 日志脱敏（复用上面的 maskedSender 变量）
                 Log.d(TAG, "WakeLock acquired for message from " + maskedSender);
             } catch (Exception e) {
                 Log.e(TAG, "Failed to acquire WakeLock", e);
