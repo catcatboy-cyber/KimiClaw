@@ -35,6 +35,7 @@ import org.json.JSONObject;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.lang.ref.WeakReference;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -47,7 +48,6 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int REQUEST_CODE_OVERLAY = 1001;
     private static final int REQUEST_CODE_NOTIFICATION = 1002;
-    private static final int PERMISSION_REQUEST_STORAGE = 1003;
     private static final String GLM_API_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
 
     private ProgressBar hungerBar;
@@ -56,9 +56,22 @@ public class MainActivity extends AppCompatActivity {
 
     private SharedPreferences prefs;
     private SharedPreferences.Editor editor;
-    private Handler mainHandler;
+    private SafeHandler mainHandler;
     private UpdateManager updateManager;
-    private ConfigManager configManager;
+
+    // 静态内部类 Handler，避免内存泄漏
+    private static class SafeHandler extends Handler {
+        private final WeakReference<MainActivity> activityRef;
+
+        SafeHandler(MainActivity activity) {
+            super(Looper.getMainLooper());
+            this.activityRef = new WeakReference<>(activity);
+        }
+
+        MainActivity getActivity() {
+            return activityRef.get();
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,49 +80,21 @@ public class MainActivity extends AppCompatActivity {
 
         prefs = getSharedPreferences("KimiClawPrefs", MODE_PRIVATE);
         editor = prefs.edit();
-        mainHandler = new Handler(Looper.getMainLooper());
+        mainHandler = new SafeHandler(this);
         updateManager = new UpdateManager(this);
-        configManager = new ConfigManager(this);
+
+        // 首次启动显示隐私政策
+        if (!prefs.getBoolean("privacy_policy_agreed", false)) {
+            showPrivacyPolicyDialog();
+            return;
+        }
 
         initViews();
         updateStatus();
         checkPermissions();
 
-        // 检查是否需要导入配置（首次启动且有备份）
-        checkImportConfig();
-
         // 处理外部打开的请求
         handleIntent(getIntent());
-    }
-
-    /**
-     * 检查是否需要导入配置
-     */
-    private void checkImportConfig() {
-        // 检查是否是首次启动（没有保存过API Key）
-        String savedKey = prefs.getString("glm_api_key", "");
-        boolean hasLaunched = prefs.getBoolean("has_launched", false);
-
-        if (!hasLaunched && configManager.hasBackupConfig()) {
-            // 首次启动且有备份配置，提示导入
-            AlertDialog.Builder builder = new AlertDialog.Builder(this);
-            builder.setTitle("发现配置备份");
-            builder.setMessage("检测到之前保存的配置文件，是否恢复？\n\n包含：\n• GLM API Key\n• 监控联系人\n• 应用设置");
-            builder.setPositiveButton("恢复配置", (dialog, which) -> {
-                if (configManager.importConfig()) {
-                    Toast.makeText(this, "配置恢复成功！", Toast.LENGTH_SHORT).show();
-                    updateStatus();
-                } else {
-                    Toast.makeText(this, "配置恢复失败", Toast.LENGTH_SHORT).show();
-                }
-            });
-            builder.setNegativeButton("暂不恢复", null);
-            builder.show();
-        }
-
-        // 标记已启动过
-        editor.putBoolean("has_launched", true);
-        editor.apply();
     }
 
     @Override
@@ -148,6 +133,8 @@ public class MainActivity extends AppCompatActivity {
 
         btnFeed.setOnClickListener(v -> {
             Intent intent = new Intent("com.kimiclaw.pet.FEED");
+            intent.setPackage(getPackageName());
+            intent.putExtra("app_token", getPackageName() + "_" + android.os.Process.myPid());
             sendBroadcast(intent);
             Toast.makeText(this, "🍤 已发送喂食指令", Toast.LENGTH_SHORT).show();
         });
@@ -275,10 +262,13 @@ public class MainActivity extends AppCompatActivity {
 
                 // 使用GLM AI回复
                 chatWithGLM(message, response -> {
-                    mainHandler.post(() -> {
-                        addChatMessage(chatContainer, "🦞", response, false);
-                        chatScroll.post(() -> chatScroll.fullScroll(ScrollView.FOCUS_DOWN));
-                    });
+                    MainActivity activity = mainHandler.getActivity();
+                    if (activity != null) {
+                        activity.runOnUiThread(() -> {
+                            addChatMessage(chatContainer, "🦞", response, false);
+                            chatScroll.post(() -> chatScroll.fullScroll(ScrollView.FOCUS_DOWN));
+                        });
+                    }
                 });
             }
         });
@@ -376,9 +366,6 @@ public class MainActivity extends AppCompatActivity {
         EditText apiKeyInput = view.findViewById(R.id.apiKeyInput);
         Button btnSaveKey = view.findViewById(R.id.btnSaveKey);
         Button btnGetKey = view.findViewById(R.id.btnGetKey);
-        TextView configStatusText = view.findViewById(R.id.configStatusText);
-        Button btnExportConfig = view.findViewById(R.id.btnExportConfig);
-        Button btnImportConfig = view.findViewById(R.id.btnImportConfig);
         Button btnPermissionOverlay = view.findViewById(R.id.btnPermissionOverlay);
         Button btnPermissionNotification = view.findViewById(R.id.btnPermissionNotification);
 
@@ -427,15 +414,6 @@ public class MainActivity extends AppCompatActivity {
                 etCustomDuration.setVisibility(View.GONE);
             }
         });
-
-        // 更新配置备份状态
-        if (configManager.hasBackupConfig()) {
-            configStatusText.setText("✅ 已找到备份配置\n位置: " + configManager.getConfigFilePath());
-            configStatusText.setTextColor(getColor(android.R.color.holo_green_dark));
-        } else {
-            configStatusText.setText("❌ 未找到备份配置");
-            configStatusText.setTextColor(getColor(android.R.color.darker_gray));
-        }
 
         AlertDialog dialog = builder.create();
 
@@ -486,31 +464,6 @@ public class MainActivity extends AppCompatActivity {
             Intent intent = new Intent(Intent.ACTION_VIEW,
                     Uri.parse("https://open.bigmodel.cn/usercenter/apikeys"));
             startActivity(intent);
-        });
-
-        // 配置备份按钮
-        btnExportConfig.setOnClickListener(v -> {
-            if (configManager.exportConfig()) {
-                Toast.makeText(this, "配置已导出到下载目录！", Toast.LENGTH_LONG).show();
-                configStatusText.setText("✅ 已找到备份配置\n位置: " + configManager.getConfigFilePath());
-                configStatusText.setTextColor(getColor(android.R.color.holo_green_dark));
-            } else {
-                Toast.makeText(this, "配置导出失败，请检查存储权限", Toast.LENGTH_SHORT).show();
-            }
-        });
-
-        btnImportConfig.setOnClickListener(v -> {
-            if (configManager.hasBackupConfig()) {
-                if (configManager.importConfig()) {
-                    Toast.makeText(this, "配置恢复成功！", Toast.LENGTH_SHORT).show();
-                    updateStatus();
-                    dialog.dismiss();
-                } else {
-                    Toast.makeText(this, "配置恢复失败", Toast.LENGTH_SHORT).show();
-                }
-            } else {
-                Toast.makeText(this, "未找到备份配置，请先导出", Toast.LENGTH_SHORT).show();
-            }
         });
 
         // 权限设置按钮
@@ -711,6 +664,9 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        if (mainHandler != null) {
+            mainHandler.removeCallbacksAndMessages(null);
+        }
         if (updateManager != null) {
             updateManager.cleanup();
         }
@@ -718,5 +674,48 @@ public class MainActivity extends AppCompatActivity {
 
     public interface GLMCallback {
         void onResponse(String response);
+    }
+
+    /**
+     * 显示隐私政策对话框
+     */
+    private void showPrivacyPolicyDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("📜 隐私政策");
+        builder.setCancelable(false);
+
+        // 创建 ScrollView 包含隐私政策内容
+        ScrollView scrollView = new ScrollView(this);
+        TextView textView = new TextView(this);
+        textView.setPadding(40, 20, 40, 20);
+        textView.setTextSize(13);
+        textView.setLineSpacing(4, 1);
+
+        // 加载隐私政策内容
+        String privacyContent = getString(R.string.privacy_policy_content);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            textView.setText(android.text.Html.fromHtml(privacyContent, android.text.Html.FROM_HTML_MODE_COMPACT));
+        } else {
+            textView.setText(android.text.Html.fromHtml(privacyContent));
+        }
+
+        scrollView.addView(textView);
+        builder.setView(scrollView);
+
+        builder.setPositiveButton("同意并继续", (dialog, which) -> {
+            editor.putBoolean("privacy_policy_agreed", true);
+            editor.apply();
+            initViews();
+            updateStatus();
+            checkPermissions();
+            handleIntent(getIntent());
+        });
+
+        builder.setNegativeButton("不同意", (dialog, which) -> {
+            Toast.makeText(this, "您必须同意隐私政策才能使用本应用", Toast.LENGTH_LONG).show();
+            finish();
+        });
+
+        builder.show();
     }
 }

@@ -476,6 +476,17 @@ public class UpdateManager {
 
             copyUriToFile(apkUri, cacheApk);
 
+            // 验证 APK 签名
+            if (!verifyApkSignature(cacheApk)) {
+                Log.e(TAG, "APK signature verification failed");
+                showSignatureErrorDialog();
+                // 删除不安全的 APK
+                if (cacheApk.exists()) {
+                    cacheApk.delete();
+                }
+                return;
+            }
+
             String authority = context.getPackageName() + ".fileprovider";
             // 检查是否有安装未知来源应用的权限（Android 8.0+）
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
@@ -739,6 +750,53 @@ public class UpdateManager {
         }
         if (executor != null && !executor.isShutdown()) {
             executor.shutdown();
+        }
+    }
+
+    /**
+     * 验证 APK 签名是否与当前应用一致
+     */
+    private boolean verifyApkSignature(File apkFile) {
+        try {
+            PackageManager pm = context.getPackageManager();
+
+            // 获取 APK 的包信息
+            PackageInfo apkInfo = pm.getPackageArchiveInfo(apkFile.getAbsolutePath(),
+                    PackageManager.GET_SIGNATURES);
+
+            if (apkInfo == null) {
+                Log.e(TAG, "Cannot get APK package info");
+                return false;
+            }
+
+            // 获取当前应用的包信息
+            PackageInfo currentInfo = pm.getPackageInfo(context.getPackageName(),
+                    PackageManager.GET_SIGNATURES);
+
+            // 比较签名
+            if (apkInfo.signatures == null || currentInfo.signatures == null) {
+                Log.e(TAG, "Signatures are null");
+                return false;
+            }
+
+            if (apkInfo.signatures.length != currentInfo.signatures.length) {
+                Log.e(TAG, "Signature count mismatch");
+                return false;
+            }
+
+            for (int i = 0; i < apkInfo.signatures.length; i++) {
+                if (!apkInfo.signatures[i].equals(currentInfo.signatures[i])) {
+                    Log.e(TAG, "Signature mismatch at index " + i);
+                    return false;
+                }
+            }
+
+            Log.d(TAG, "APK signature verification passed");
+            return true;
+
+        } catch (Exception e) {
+            Log.e(TAG, "Signature verification error", e);
+            return false;
         }
     }
 }

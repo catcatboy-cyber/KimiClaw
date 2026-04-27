@@ -32,8 +32,17 @@ public class MessageMonitorService extends NotificationListenerService {
 
     @Override
     public void onNotificationPosted(StatusBarNotification sbn) {
+        if (sbn == null) {
+            return;
+        }
+
         String packageName = sbn.getPackageName();
         Notification notification = sbn.getNotification();
+
+        if (notification == null || notification.extras == null) {
+            return;
+        }
+
         Bundle extras = notification.extras;
 
         // 获取通知信息
@@ -142,6 +151,8 @@ public class MessageMonitorService extends NotificationListenerService {
     private void notifyFloatingLobster(String sender, String content, String packageName, PendingIntent contentIntent) {
         // 直接发送广播给悬浮窗服务显示提醒
         android.content.Intent intent = new android.content.Intent("com.kimiclaw.pet.SHOW_ALERT");
+        intent.setPackage(getPackageName());
+        intent.putExtra("app_token", getPackageName() + "_" + android.os.Process.myPid());
         intent.putExtra("sender", sender);
         intent.putExtra("content", content);
         intent.putExtra("packageName", packageName);
@@ -150,7 +161,10 @@ public class MessageMonitorService extends NotificationListenerService {
         }
         sendBroadcast(intent);
 
-        Log.d(TAG, "监控到消息：" + sender + " - " + content);
+        // 日志脱敏处理
+        String maskedSender = maskSensitiveInfo(sender);
+        String maskedContent = maskSensitiveInfo(content);
+        Log.d(TAG, "监控到消息：" + maskedSender + " - " + maskedContent);
     }
 
     @Override
@@ -168,5 +182,19 @@ public class MessageMonitorService extends NotificationListenerService {
     public void onListenerDisconnected() {
         super.onListenerDisconnected();
         Log.d(TAG, "通知监听器已断开");
+    }
+
+    /**
+     * 脱敏处理敏感信息
+     */
+    private String maskSensitiveInfo(String text) {
+        if (text == null || text.isEmpty()) {
+            return "";
+        }
+        if (text.length() <= 4) {
+            return "***";
+        }
+        // 保留前2个字符和后2个字符，中间用 *** 替代
+        return text.substring(0, 2) + "***" + text.substring(text.length() - 2);
     }
 }

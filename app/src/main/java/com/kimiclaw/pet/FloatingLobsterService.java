@@ -32,9 +32,9 @@ import android.widget.PopupWindow;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -70,8 +70,8 @@ public class FloatingLobsterService extends Service {
     private static final String LOCK_SCREEN_CHANNEL_ID = "KimiClawLockScreenChannel";
     private static final String TAG = "FloatingLobster";
 
-    // 消息队列：支持多App、多联系人、多条消息
-    private final List<MessageItem> messageQueue = new ArrayList<>();
+    // 消息队列：支持多App、多联系人、多条消息（线程安全）
+    private final List<MessageItem> messageQueue = new CopyOnWriteArrayList<>();
     private MessagePopupAdapter messageAdapter;
     private TextView tvTitle;
     private RecyclerView rvMessages;
@@ -411,7 +411,9 @@ public class FloatingLobsterService extends Service {
         android.os.PowerManager powerManager = (android.os.PowerManager) getSystemService(Context.POWER_SERVICE);
         boolean isLocked = keyguardManager != null && keyguardManager.isKeyguardLocked();
         boolean isScreenOn = powerManager != null && powerManager.isInteractive();
-        Log.d(TAG, "showMessagePopup: sender=" + safeSender + ", isLocked=" + isLocked + ", isScreenOn=" + isScreenOn + ", popupExists=" + (messagePopupView != null && messagePopupView.getParent() != null));
+        // 日志脱敏
+        String maskedSender = maskSensitiveInfo(safeSender);
+        Log.d(TAG, "showMessagePopup: sender=" + maskedSender + ", isLocked=" + isLocked + ", isScreenOn=" + isScreenOn + ", popupExists=" + (messagePopupView != null && messagePopupView.getParent() != null));
 
         // 锁屏时点亮屏幕（每次消息都尝试）
         boolean wakeScreen = prefs.getBoolean("wakeScreenOnMessage", true);
@@ -424,7 +426,9 @@ public class FloatingLobsterService extends Service {
                         "KimiClaw:MessageWakeLock"
                 );
                 wakeLock.acquire(5000);
-                Log.d(TAG, "WakeLock acquired for message from " + safeSender);
+                // 日志脱敏
+                String maskedSender = maskSensitiveInfo(safeSender);
+                Log.d(TAG, "WakeLock acquired for message from " + maskedSender);
             } catch (Exception e) {
                 Log.e(TAG, "Failed to acquire WakeLock", e);
             }
@@ -851,6 +855,11 @@ public class FloatingLobsterService extends Service {
     private BroadcastReceiver feedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
+            // 安全验证：仅接受本应用发送的广播
+            if (!isValidBroadcast(intent)) {
+                Log.w(TAG, "Rejected unauthorized feed broadcast");
+                return;
+            }
             feedLobster();
         }
     };
@@ -858,6 +867,12 @@ public class FloatingLobsterService extends Service {
     private BroadcastReceiver alertReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
+            // 安全验证：仅接受本应用发送的广播
+            if (!isValidBroadcast(intent)) {
+                Log.w(TAG, "Rejected unauthorized alert broadcast");
+                return;
+            }
+
             String sender = intent.getStringExtra("sender");
             String content = intent.getStringExtra("content");
             String packageName = intent.getStringExtra("packageName");
@@ -889,6 +904,40 @@ public class FloatingLobsterService extends Service {
     @Override
     public IBinder onBind(Intent intent) {
         return null;
+    }
+
+    /**
+     * 验证广播是否来自本应用或系统服务
+     */
+    private boolean isValidBroadcast(Intent intent) {
+        if (intent == null) {
+            return false;
+        }
+
+        // 检查是否有自定义验证标记
+        String token = intent.getStringExtra("app_token");
+        String expectedToken = getPackageName() + "_" + android.os.Process.myPid();
+
+        if (token != null && token.equals(expectedToken)) {
+            return true;
+        }
+
+        // 兼容旧版本：检查 Intent 的包名（不完全可靠，但比无验证好）
+        // 注意：这个方法在某些情况下可能返回 null
+        String callingPackage = intent.getPackage();
+        if (callingPackage != null && callingPackage.equals(getPackageName())) {
+            return true;
+        }
+
+        // 如果没有设置包名，检查 Intent 的 Component
+        if (intent.getComponent() != null) {
+            String componentPackage = intent.getComponent().getPackageName();
+            if (componentPackage != null && componentPackage.equals(getPackageName())) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -943,7 +992,9 @@ public class FloatingLobsterService extends Service {
             }
             lastNotificationId = notifyId;
             notificationManager.notify(notifyId, builder.build());
-            Log.d(TAG, "Lock screen notification sent: id=" + notifyId + ", sender=" + sender + ", showContent=" + showContentOnLockScreen + ", alertEveryTime=" + alertEveryTime);
+            // 日志脱敏
+            String maskedSender = maskSensitiveInfo(sender);
+            Log.d(TAG, "Lock screen notification sent: id=" + notifyId + ", sender=" + maskedSender + ", showContent=" + showContentOnLockScreen + ", alertEveryTime=" + alertEveryTime);
         } catch (Exception e) {
             Log.e(TAG, "Failed to send lock screen notification", e);
         }
@@ -965,5 +1016,19 @@ public class FloatingLobsterService extends Service {
         unregisterReceiver(feedReceiver);
         unregisterReceiver(alertReceiver);
         handler.removeCallbacksAndMessages(null);
+    }
+
+    /**
+     * 脱敏处理敏感信息
+     */
+    private String maskSensitiveInfo(String text) {
+        if (text == null || text.isEmpty()) {
+            return "";
+        }
+        if (text.length() <= 4) {
+            return "***";
+        }
+        // 保留前2个字符和后2个字符，中间用 *** 替代
+        return text.substring(0, 2) + "***" + text.substring(text.length() - 2);
     }
 }

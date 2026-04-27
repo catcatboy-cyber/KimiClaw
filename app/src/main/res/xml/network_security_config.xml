@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- 默认配置：禁止明文HTTP流量 -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- GLM API 配置 -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">open.bigmodel.cn</domain>
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </domain-config>
+
+    <!-- GitHub API 配置 -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">api.github.com</domain>
+        <domain includeSubdomains="true">github.com</domain>
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </domain-config>
+</network-security-config>
