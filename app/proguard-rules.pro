@@ -60,6 +60,17 @@
 -keep class com.kimiclaw.pet.MessageItem { *; }
 -keep class com.kimiclaw.pet.MessagePopupAdapter { *; }
 
+# 保留所有资源引用
+-keepclassmembers class **.R$* {
+    public static <fields>;
+}
+
+# 保留 Activity 的所有方法（防止反射调用失败）
+-keepclassmembers class * extends android.app.Activity {
+    public void *(android.view.View);
+    public void onCreate(android.os.Bundle);
+}
+
 # 保留 FileProvider
 -keep class androidx.core.content.FileProvider { *; }
 
