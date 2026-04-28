@@ -247,7 +247,7 @@ public class MainActivity extends AppCompatActivity {
         ScrollView chatScroll = view.findViewById(R.id.chatScroll);
 
         // 添加欢迎消息
-        addChatMessage(chatContainer, "🦞", "嗨！我是KimiClaw，有什么可以帮你的吗？", false);
+        addChatMessage(chatContainer, "🦞", "嗨！我是MelodyClaw，有什么可以帮你的吗？", false);
 
         AlertDialog dialog = builder.create();
 
@@ -313,7 +313,7 @@ public class MainActivity extends AppCompatActivity {
                 JSONArray messages = new JSONArray();
                 JSONObject systemMsg = new JSONObject();
                 systemMsg.put("role", "system");
-                systemMsg.put("content", "你是一只可爱的桌面小龙虾宠物，名字叫KimiClaw。你会用可爱、俏皮的语气回复用户，偶尔使用emoji。你的性格活泼可爱，喜欢帮助主人。");
+                systemMsg.put("content", "你是一只可爱的桌面小龙虾宠物，名字叫MelodyClaw。你会用可爱、俏皮的语气回复用户，偶尔使用emoji。你的性格活泼可爱，喜欢帮助主人。");
                 messages.put(systemMsg);
 
                 JSONObject userMsg = new JSONObject();
