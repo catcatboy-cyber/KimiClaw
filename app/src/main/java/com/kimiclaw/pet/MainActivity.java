@@ -363,6 +363,9 @@ public class MainActivity extends AppCompatActivity {
         View view = LayoutInflater.from(this).inflate(R.layout.dialog_settings, null);
         builder.setView(view);
 
+        // 初始化SystemSettingsHelper
+        SystemSettingsHelper settingsHelper = new SystemSettingsHelper(this);
+
         EditText apiKeyInput = view.findViewById(R.id.apiKeyInput);
         Button btnSaveKey = view.findViewById(R.id.btnSaveKey);
         Button btnGetKey = view.findViewById(R.id.btnGetKey);
@@ -377,6 +380,7 @@ public class MainActivity extends AppCompatActivity {
         CheckBox cbShowContentOnLockScreen = view.findViewById(R.id.cbShowContentOnLockScreen);
         CheckBox cbAlertEveryTime = view.findViewById(R.id.cbAlertEveryTime);
         Button btnSaveLockScreen = view.findViewById(R.id.btnSaveLockScreen);
+        TextView tvSystemInfo = view.findViewById(R.id.tvSystemInfo);
 
         RadioGroup rgPopupDuration = view.findViewById(R.id.rgPopupDuration);
         RadioButton rbDurationForever = view.findViewById(R.id.rbDurationForever);
@@ -384,6 +388,9 @@ public class MainActivity extends AppCompatActivity {
         RadioButton rbDurationCustom = view.findViewById(R.id.rbDurationCustom);
         EditText etCustomDuration = view.findViewById(R.id.etCustomDuration);
         Button btnSaveDuration = view.findViewById(R.id.btnSaveDuration);
+
+        // 显示系统信息
+        tvSystemInfo.setText(settingsHelper.getSystemInfo());
 
         // 加载已保存的API Key
         String savedKey = prefs.getString("glm_api_key", "");
@@ -466,12 +473,10 @@ public class MainActivity extends AppCompatActivity {
             startActivity(intent);
         });
 
-        // 权限设置按钮
+        // 权限设置按钮 - 使用SystemSettingsHelper
         btnPermissionOverlay.setOnClickListener(v -> {
             if (!Settings.canDrawOverlays(this)) {
-                Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                        Uri.parse("package:" + getPackageName()));
-                startActivity(intent);
+                settingsHelper.openOverlaySettings();
             } else {
                 Toast.makeText(this, "悬浮窗权限已开启", Toast.LENGTH_SHORT).show();
             }
@@ -479,8 +484,7 @@ public class MainActivity extends AppCompatActivity {
 
         btnPermissionNotification.setOnClickListener(v -> {
             if (!isNotificationServiceEnabled()) {
-                Intent intent = new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS);
-                startActivity(intent);
+                settingsHelper.openNotificationListenerSettings();
             } else {
                 Toast.makeText(this, "通知监听权限已开启", Toast.LENGTH_SHORT).show();
             }
@@ -494,71 +498,22 @@ public class MainActivity extends AppCompatActivity {
         cbShowContentOnLockScreen.setChecked(showContentOnLockScreen);
         cbAlertEveryTime.setChecked(alertEveryTime);
 
-        // 后台运行设置按钮
+        // 后台运行设置按钮 - 使用SystemSettingsHelper
         btnIgnoreBattery.setOnClickListener(v -> {
             PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
             if (pm.isIgnoringBatteryOptimizations(getPackageName())) {
                 Toast.makeText(this, "已忽略电池优化", Toast.LENGTH_SHORT).show();
             } else {
-                Intent intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
-                intent.setData(Uri.parse("package:" + getPackageName()));
-                startActivity(intent);
+                settingsHelper.openBatteryOptimizationSettings();
             }
         });
 
         btnAutoStart.setOnClickListener(v -> {
-            try {
-                // 尝试打开各厂商的自启动管理页面
-                Intent intent = new Intent();
-                String manufacturer = Build.MANUFACTURER.toLowerCase();
-
-                if (manufacturer.contains("xiaomi")) {
-                    // 小米
-                    intent.setComponent(new ComponentName("com.miui.securitycenter",
-                            "com.miui.permcenter.autostart.AutoStartManagementActivity"));
-                } else if (manufacturer.contains("huawei") || manufacturer.contains("honor")) {
-                    // 华为/荣耀
-                    intent.setComponent(new ComponentName("com.huawei.systemmanager",
-                            "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity"));
-                } else if (manufacturer.contains("oppo")) {
-                    // OPPO
-                    intent.setComponent(new ComponentName("com.coloros.safecenter",
-                            "com.coloros.safecenter.permission.startup.StartupAppListActivity"));
-                } else if (manufacturer.contains("vivo")) {
-                    // vivo
-                    intent.setComponent(new ComponentName("com.vivo.permissionmanager",
-                            "com.vivo.permissionmanager.activity.BgStartUpManagerActivity"));
-                } else if (manufacturer.contains("meizu")) {
-                    // 魅族
-                    intent.setComponent(new ComponentName("com.meizu.safe",
-                            "com.meizu.safe.security.SHOW_APPSEC"));
-                    intent.addCategory(Intent.CATEGORY_DEFAULT);
-                    intent.putExtra("packageName", getPackageName());
-                } else if (manufacturer.contains("samsung")) {
-                    // 三星
-                    intent.setComponent(new ComponentName("com.samsung.android.lool",
-                            "com.samsung.android.sm.ui.battery.BatteryActivity"));
-                } else {
-                    // 其他品牌，打开应用详情页
-                    intent.setAction(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-                    intent.setData(Uri.parse("package:" + getPackageName()));
-                }
-
-                startActivity(intent);
-            } catch (Exception e) {
-                // 如果打开失败，提示用户手动设置
-                Toast.makeText(this, "无法自动打开，请在系统设置中手动允许自启动", Toast.LENGTH_LONG).show();
-                // 打开应用详情页作为备选
-                Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-                intent.setData(Uri.parse("package:" + getPackageName()));
-                startActivity(intent);
-            }
+            settingsHelper.openAutoStartSettings();
         });
 
         btnAppSettings.setOnClickListener(v -> {
-            Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-            intent.setData(Uri.parse("package:" + getPackageName()));
-            startActivity(intent);
+            settingsHelper.openAppDetailsSettings();
         });
 
         btnInstallPermission.setOnClickListener(v -> {
@@ -566,9 +521,7 @@ public class MainActivity extends AppCompatActivity {
                 if (getPackageManager().canRequestPackageInstalls()) {
                     Toast.makeText(this, "已允许安装未知来源应用", Toast.LENGTH_SHORT).show();
                 } else {
-                    Intent intent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES);
-                    intent.setData(Uri.parse("package:" + getPackageName()));
-                    startActivity(intent);
+                    settingsHelper.openInstallPermissionSettings();
                 }
             } else {
                 Toast.makeText(this, "Android 8.0 以下无需此权限", Toast.LENGTH_SHORT).show();

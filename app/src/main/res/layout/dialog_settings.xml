@@ -19,14 +19,167 @@
             android:textStyle="bold"
             android:textColor="@color/lobster_red"
             android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="16dp" />
+
+        <!-- ========== 系统权限设置区域 ========== -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="📱 系统权限设置"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="@color/lobster_red"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="点击下方按钮，系统会自动跳转到对应的设置页面"
+            android:textSize="12sp"
+            android:textColor="@color/gray"
+            android:layout_marginBottom="12dp" />
+
+        <!-- 基础权限 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="基础权限"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="@color/black"
+            android:layout_marginBottom="6dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+
+            <Button
+                android:id="@+id/btnPermissionOverlay"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:text="🔲 悬浮窗权限"
+                android:backgroundTint="#9C27B0"
+                android:layout_marginEnd="8dp"
+                android:textSize="13sp" />
+
+            <Button
+                android:id="@+id/btnPermissionNotification"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:text="🔔 通知监听"
+                android:backgroundTint="#9C27B0"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <!-- 后台运行权限 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="后台运行权限"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="@color/black"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="6dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="为保证小龙虾不被系统杀掉，请开启以下权限"
+            android:textSize="11sp"
+            android:textColor="@color/gray"
+            android:layout_marginBottom="8dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+
+            <Button
+                android:id="@+id/btnIgnoreBattery"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:text="🔋 电池优化"
+                android:backgroundTint="#FF5722"
+                android:layout_marginEnd="8dp"
+                android:textSize="13sp" />
+
+            <Button
+                android:id="@+id/btnAutoStart"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:text="🚀 自启动管理"
+                android:backgroundTint="#FF5722"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <!-- 其他权限 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="其他权限"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="@color/black"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="6dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="12dp">
+
+            <Button
+                android:id="@+id/btnInstallPermission"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:text="📦 安装权限"
+                android:backgroundTint="#E91E63"
+                android:layout_marginEnd="8dp"
+                android:textSize="13sp" />
+
+            <Button
+                android:id="@+id/btnAppSettings"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:text="⚙️ 应用详情"
+                android:backgroundTint="#607D8B"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#EEEEEE"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="16dp" />
+
+        <!-- ========== 功能设置区域 ========== -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🎨 功能设置"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="@color/lobster_red"
             android:layout_marginBottom="12dp" />
 
         <!-- GLM API Key 配置 -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="GLM API Key 配置"
-            android:textSize="15sp"
+            android:text="AI 对话配置"
+            android:textSize="14sp"
             android:textStyle="bold"
             android:textColor="@color/black"
             android:layout_marginBottom="6dp" />
@@ -46,7 +199,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginBottom="12dp">
+            android:layout_marginBottom="16dp">
 
             <Button
                 android:id="@+id/btnSaveKey"
@@ -55,8 +208,8 @@
                 android:layout_weight="1"
                 android:text="💾 保存"
                 android:backgroundTint="@color/lobster_red"
-                android:layout_marginEnd="6dp"
-                android:textSize="12sp" />
+                android:layout_marginEnd="8dp"
+                android:textSize="13sp" />
 
             <Button
                 android:id="@+id/btnGetKey"
@@ -65,21 +218,15 @@
                 android:layout_weight="1"
                 android:text="🔑 获取Key"
                 android:backgroundTint="#4CAF50"
-                android:textSize="12sp" />
+                android:textSize="13sp" />
         </LinearLayout>
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#EEEEEE"
-            android:layout_marginBottom="12dp" />
 
         <!-- 消息弹窗持续时间 -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="消息弹窗持续时间"
-            android:textSize="15sp"
+            android:textSize="14sp"
             android:textStyle="bold"
             android:textColor="@color/black"
             android:layout_marginBottom="6dp" />
@@ -131,90 +278,15 @@
             android:layout_height="44dp"
             android:text="💾 保存持续时间"
             android:backgroundTint="@color/lobster_red"
-            android:layout_marginBottom="12dp"
-            android:textSize="12sp" />
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#EEEEEE"
-            android:layout_marginBottom="12dp" />
-
-        <!-- 后台运行设置 -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="后台运行设置"
-            android:textSize="15sp"
-            android:textStyle="bold"
-            android:textColor="@color/black"
-            android:layout_marginBottom="4dp" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="为保证消息监控和悬浮窗不被系统杀掉，请允许本应用后台运行"
-            android:textSize="11sp"
-            android:textColor="@color/gray"
-            android:layout_marginBottom="6dp" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="12dp">
-
-            <Button
-                android:id="@+id/btnIgnoreBattery"
-                android:layout_width="0dp"
-                android:layout_height="44dp"
-                android:layout_weight="1"
-                android:text="忽略电池优化"
-                android:backgroundTint="#FF5722"
-                android:layout_marginEnd="6dp"
-                android:textSize="12sp" />
-
-            <Button
-                android:id="@+id/btnAutoStart"
-                android:layout_width="0dp"
-                android:layout_height="44dp"
-                android:layout_weight="1"
-                android:text="自启动管理"
-                android:backgroundTint="#FF5722"
-                android:layout_marginEnd="6dp"
-                android:textSize="12sp" />
-
-            <Button
-                android:id="@+id/btnAppSettings"
-                android:layout_width="0dp"
-                android:layout_height="44dp"
-                android:layout_weight="1"
-                android:text="打开应用设置"
-                android:backgroundTint="#607D8B"
-                android:textSize="12sp" />
-        </LinearLayout>
-
-        <Button
-            android:id="@+id/btnInstallPermission"
-            android:layout_width="match_parent"
-            android:layout_height="44dp"
-            android:text="允许安装未知来源应用"
-            android:backgroundTint="#E91E63"
-            android:layout_marginBottom="12dp"
-            android:textSize="12sp" />
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#EEEEEE"
-            android:layout_marginBottom="12dp" />
+            android:layout_marginBottom="16dp"
+            android:textSize="13sp" />
 
         <!-- 锁屏通知 -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="锁屏通知"
-            android:textSize="15sp"
+            android:text="锁屏通知设置"
+            android:textSize="14sp"
             android:textStyle="bold"
             android:textColor="@color/black"
             android:layout_marginBottom="6dp" />
@@ -245,52 +317,22 @@
             android:layout_width="match_parent"
             android:layout_height="44dp"
             android:layout_marginTop="6dp"
-            android:text="保存锁屏通知设置"
+            android:text="💾 保存锁屏设置"
             android:backgroundTint="@color/lobster_red"
-            android:layout_marginBottom="12dp"
-            android:textSize="12sp" />
+            android:layout_marginBottom="16dp"
+            android:textSize="13sp" />
 
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#EEEEEE"
-            android:layout_marginBottom="12dp" />
-
-        <!-- 权限设置 -->
+        <!-- 系统信息 -->
         <TextView
+            android:id="@+id/tvSystemInfo"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="权限设置"
-            android:textSize="15sp"
-            android:textStyle="bold"
-            android:textColor="@color/black"
-            android:layout_marginBottom="6dp" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="4dp">
-
-            <Button
-                android:id="@+id/btnPermissionOverlay"
-                android:layout_width="0dp"
-                android:layout_height="44dp"
-                android:layout_weight="1"
-                android:text="🔲 悬浮窗"
-                android:backgroundTint="#9C27B0"
-                android:layout_marginEnd="6dp"
-                android:textSize="12sp" />
-
-            <Button
-                android:id="@+id/btnPermissionNotification"
-                android:layout_width="0dp"
-                android:layout_height="44dp"
-                android:layout_weight="1"
-                android:text="🔔 通知监听"
-                android:backgroundTint="#9C27B0"
-                android:textSize="12sp" />
-        </LinearLayout>
+            android:text="系统信息加载中..."
+            android:textSize="11sp"
+            android:textColor="@color/gray"
+            android:layout_gravity="center_horizontal"
+            android:gravity="center"
+            android:layout_marginTop="8dp" />
 
     </LinearLayout>
 </ScrollView>
